@@ -29,6 +29,12 @@ Au premier démarrage, le volume Postgres est vide : le script
 
 API disponible sur `http://localhost:8000` ; OpenAPI sur `/docs`.
 
+## Les logs
+
+```bash
+docker compose logs --tail 100 api
+```
+
 ## Reset complet
 
 À ce stade, le schéma n'est pas versionné. Pour repartir de zéro :

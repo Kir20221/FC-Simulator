@@ -1,8 +1,5 @@
-"""Configuration et accès à la base PostgreSQL.
-
-Pool de connexions partagé par l'application FastAPI.
-Les paramètres viennent de variables d'environnement (cf. docker-compose.yml).
-"""
+# connection.py
+"""Configuration et accès à la base PostgreSQL."""
 from __future__ import annotations
 
 import os
@@ -22,15 +19,12 @@ DB_CONFIG = {
 
 _CONNINFO = " ".join(f"{k}={v}" for k, v in DB_CONFIG.items())
 
-# Pool ouvert au démarrage de l'application, fermé à l'arrêt.
-pool: ConnectionPool = ConnectionPool(conninfo=_CONNINFO, min_size=1, max_size=5, open=False)
+# Pool ouvert automatiquement à la première utilisation.
+pool: ConnectionPool = ConnectionPool(conninfo=_CONNINFO, min_size=1, max_size=5)
 
 
 @contextmanager
 def get_conn() -> Iterator[psycopg.Connection]:
-    """Fournit une connexion du pool, avec commit automatique en sortie de bloc.
-
-    En cas d'exception, la transaction est annulée par le context manager de psycopg.
-    """
+    """Fournit une connexion du pool, commit en sortie de bloc, rollback si exception."""
     with pool.connection() as conn:
         yield conn
