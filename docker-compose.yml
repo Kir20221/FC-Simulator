@@ -1,0 +1,70 @@
+# ============================================================
+# Projet Drake — orchestration locale
+# ------------------------------------------------------------
+# Trois services :
+#   - db      : PostgreSQL, schéma initialisé au premier démarrage
+#               via /docker-entrypoint-initdb.d/.
+#   - api     : FastAPI + moteur de simulation (un seul service
+#               comme prévu dans la synthèse).
+#   - pgadmin : client web pgAdmin 4, pré-configuré pour se
+#               connecter au service `db` sans saisie manuelle.
+#
+# Reset complet (perte de données acceptée à ce stade) :
+#   docker compose down -v
+# ============================================================
+
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB:       drake
+      POSTGRES_USER:     drake
+      POSTGRES_PASSWORD: drake
+    ports:
+      - "5432:5432"
+    volumes:
+      - drake_pgdata:/var/lib/postgresql/data
+      - ./server/sql:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U drake -d drake"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  api:
+    build:
+      context: ./server
+    environment:
+      DB_HOST:     db
+      DB_PORT:     "5432"
+      DB_NAME:     drake
+      DB_USER:     drake
+      DB_PASSWORD: drake
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  pgadmin:
+    image: dpage/pgadmin4:9
+    environment:
+      # Identifiants pour se connecter à pgAdmin lui-même (interface web).
+      PGADMIN_DEFAULT_EMAIL:    admin@drake.fr
+      PGADMIN_DEFAULT_PASSWORD: admin
+      # Désactive la fenêtre "master password" au premier démarrage.
+      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: "False"
+    ports:
+      - "5050:80"
+    volumes:
+      - drake_pgadmin:/var/lib/pgadmin
+      # Pré-configuration du serveur "drake-db" : pas besoin de saisir
+      # host/user/password à la main au premier login.
+      - ./pgadmin/servers.json:/pgadmin4/servers.json:ro
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  drake_pgdata:
+  drake_pgadmin:

@@ -1,0 +1,19 @@
+# Comportement par défaut : Git détecte le type et normalise correctement.
+* text=auto
+
+# Fichiers qui DOIVENT rester en LF (lus par Linux dans Docker, ou conventions communes).
+*.sh        text eol=lf
+*.sql       text eol=lf
+*.py        text eol=lf
+*.yml       text eol=lf
+*.yaml      text eol=lf
+Dockerfile  text eol=lf
+*.json      text eol=lf
+*.md        text eol=lf
+*.txt       text eol=lf
+
+# Fichiers binaires : Git ne touche à rien.
+*.png       binary
+*.jpg       binary
+*.pdf       binary
+*.pth       binary
