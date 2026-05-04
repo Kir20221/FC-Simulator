@@ -5,7 +5,7 @@ import psycopg
 from pydantic import BaseModel, Field
 
 
-class ParametresDrake(BaseModel):
+class ParametresScenario(BaseModel):
     r_star:  float = Field(default=1.5,      ge=0)
     fp:      float = Field(default=0.5,      ge=0, le=1)
     ne:      float = Field(default=0.2,      ge=0)
@@ -18,7 +18,7 @@ class ParametresDrake(BaseModel):
 class Scenario(BaseModel):
     id:              int | None = None
     nom:             str
-    parametres:      ParametresDrake
+    parametres:      ParametresScenario
     nombre_systemes: int = Field(ge=1)
 
     def create(self, conn: psycopg.Connection) -> int:
@@ -46,7 +46,7 @@ class Scenario(BaseModel):
 class ScenarioRequest(BaseModel):
     nom:             str
     nombre_systemes: int = Field(default=10, ge=1, le=10_000)
-    parametres:      ParametresDrake = Field(default_factory=ParametresDrake)
+    parametres:      ParametresScenario = Field(default_factory=ParametresScenario)
 
     def to_scenario(self) -> Scenario:
         return Scenario(

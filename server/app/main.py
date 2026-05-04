@@ -1,22 +1,18 @@
 # main.py
 from __future__ import annotations
+
 import random
+
 from fastapi import FastAPI, HTTPException
 
 from app.db.connection import get_conn
-from app.scenario import Scenario, ScenarioRequest, SimulationRequest
+from app.scenario import ScenarioRequest, SimulationRequest
+from app.simulation.entites import generer_entites
 from app.simulation.moteur import executer_simulation
-from app.simulation.substrat import generer_substrat
 
-app = FastAPI(title="FCSimulation", version="0.0.1")
 
-# sert à vérifier que la connexion à la base est opérationnelle au démarrage du service
-@app.get("/api/v1/health")
-def health():
-    with get_conn() as conn, conn.cursor() as cur:
-        cur.execute("SELECT 1")
-        cur.fetchone()
-    return {"status": "ok"}
+app = FastAPI(title="Drake — service simulation", version="0.0.1")
+
 
 @app.post("/api/v1/scenarios")
 def create_scenario(req: ScenarioRequest):
@@ -26,11 +22,27 @@ def create_scenario(req: ScenarioRequest):
     return {"scenario_id": scenario.id}
 
 
+@app.post("/api/v1/scenarios/full")
+def create_scenario_full(req: ScenarioRequest):
+
+    result_scenario = create_scenario(req)
+    scenario_id = result_scenario["scenario_id"]
+    result_entites = create_entites(scenario_id)
+    result_simulation = create_simulation(scenario_id, SimulationRequest())
+    
+    return {
+        "scenario_id":   scenario_id,
+        "galaxie_id":    result_entites["galaxie_id"],
+        "simulation_id": result_simulation["simulation_id"],
+        "nb_evenements": result_simulation["nb_evenements"],
+    }
+
+
 @app.get("/api/v1/scenarios/{scenario_id}")
 def get_scenario(scenario_id: int):
     with get_conn() as conn, conn.cursor() as cur:
         cur.execute(
-            "SELECT id, nom, statut_substrat, nombre_systemes "
+            "SELECT id, nom, statut_entites, nombre_systemes "
             "FROM scenario WHERE id = %s",
             (scenario_id,),
         )
@@ -38,9 +50,9 @@ def get_scenario(scenario_id: int):
         if row is None:
             raise HTTPException(status_code=404, detail="Scénario inconnu")
         scenario = {
-            "id":              row[0],
-            "nom":             row[1],
-            "statut_substrat": row[2],
+            "id":             row[0],
+            "nom":            row[1],
+            "statut_entites": row[2],
             "nombre_systemes": row[3],
         }
 
@@ -58,11 +70,11 @@ def get_scenario(scenario_id: int):
     return scenario
 
 
-@app.post("/api/v1/scenarios/{scenario_id}/substrat")
-def create_substrat(scenario_id: int, seed: int | None = None):
+@app.post("/api/v1/scenarios/{scenario_id}/entites")
+def create_entites(scenario_id: int, seed: int | None = None):
     seed = seed if seed is not None else random.randint(0, 2**63 - 1)
     with get_conn() as conn:
-        galaxie_id = generer_substrat(conn, scenario_id, seed)
+        galaxie_id = generer_entites(conn, scenario_id, seed)
     return {"scenario_id": scenario_id, "galaxie_id": galaxie_id, "seed": seed}
 
 
@@ -96,7 +108,7 @@ def get_evenements(simulation_id: int, limite: int = 100):
             raise HTTPException(status_code=404, detail="Simulation inconnue")
 
         cur.execute(
-            "SELECT e.id, e.timecode, t.libelle, e.substrat_type, e.substrat_id, e.payload "
+            "SELECT e.id, e.timecode, t.libelle, e.entite_type, e.entite_id, e.payload "
             "FROM evenement e "
             "JOIN type_evenement t ON t.id = e.type_evenement_id "
             "WHERE e.simulation_id = %s "
@@ -106,12 +118,12 @@ def get_evenements(simulation_id: int, limite: int = 100):
         )
         evenements = [
             {
-                "id":            r[0],
-                "timecode":      r[1],
-                "type":          r[2],
-                "substrat_type": r[3],
-                "substrat_id":   r[4],
-                "payload":       r[5],
+                "id":          r[0],
+                "timecode":    r[1],
+                "type":        r[2],
+                "entite_type": r[3],
+                "entite_id":   r[4],
+                "payload":     r[5],
             }
             for r in cur.fetchall()
         ]
