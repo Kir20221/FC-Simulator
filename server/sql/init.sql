@@ -96,3 +96,23 @@ CREATE TABLE evenement (
 
 CREATE INDEX idx_evenement_sim_time ON evenement(simulation_id, timecode);
 CREATE INDEX idx_evenement_entite   ON evenement(entite_type, entite_id);
+
+
+-- Table dataset : métadonnées des datasets d'entraînement.
+-- Les fichiers parquet eux-mêmes vivent sur disque (volume monté),
+-- pas en DB.
+CREATE TABLE IF NOT EXISTS dataset (
+    nom            TEXT PRIMARY KEY,
+    date_creation  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    nb_systemes    INTEGER NOT NULL,
+    seed           INTEGER NOT NULL,
+    chemin_fichier TEXT NOT NULL,
+    taille_octets  BIGINT NOT NULL,
+    -- Stats calculées au moment de la génération (snapshot, pas recalculé).
+    stats          JSONB NOT NULL
+);
+ 
+-- Index sur la date pour lister du plus récent au plus ancien.
+CREATE INDEX IF NOT EXISTS idx_dataset_date_creation
+    ON dataset (date_creation DESC);
+ 

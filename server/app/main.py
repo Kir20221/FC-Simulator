@@ -1,5 +1,6 @@
 # main.py
 from __future__ import annotations
+from ml.api import router as ml_router
 
 import random
 
@@ -10,9 +11,8 @@ from app.scenario import ScenarioRequest, SimulationRequest
 from app.simulation.entites import generer_entites
 from app.simulation.moteur import executer_simulation
 
-
 app = FastAPI(title="Drake — service simulation", version="0.0.1")
-
+app.include_router(ml_router, prefix="/api/v1/training")
 
 @app.post("/api/v1/scenarios")
 def create_scenario(req: ScenarioRequest):

@@ -4,10 +4,14 @@
 # Trois services :
 #   - db      : PostgreSQL, schéma initialisé au premier démarrage
 #               via /docker-entrypoint-initdb.d/.
-#   - api     : FastAPI + moteur de simulation (un seul service
-#               comme prévu dans la synthèse).
+#   - api     : FastAPI + moteur de simulation + module ml
+#               (générateur de vérité, training à venir).
 #   - pgadmin : client web pgAdmin 4, pré-configuré pour se
 #               connecter au service `db` sans saisie manuelle.
+#
+# CLI ml (depuis l'extérieur) :
+#   docker compose exec api python -m ml.cli datasets create \
+#     --nom v1 --systemes 1000
 #
 # Reset complet (perte de données acceptée à ce stade) :
 #   docker compose down -v
@@ -43,26 +47,27 @@ services:
     ports:
       - "8000:8000"
     volumes:
+      # Code applicatif (app + ml) bind-monté pour itération rapide.
       - ./server/app:/srv/app
+      - ./server/ml:/srv/ml
+      # Volume des datasets d'entraînement, partagé hôte ↔ conteneur.
+      # En lecture-écriture : c'est l'API qui génère.
+      - ./data:/srv/data
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
     depends_on:
       db:
         condition: service_healthy
-  
+
   pgadmin:
     image: dpage/pgadmin4:9
     environment:
-      # Identifiants pour se connecter à pgAdmin lui-même (interface web).
       PGADMIN_DEFAULT_EMAIL:    admin@drake.fr
       PGADMIN_DEFAULT_PASSWORD: admin
-      # Désactive la fenêtre "master password" au premier démarrage.
       PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: "False"
     ports:
       - "5050:80"
     volumes:
       - drake_pgadmin:/var/lib/pgadmin
-      # Pré-configuration du serveur "drake-db" : pas besoin de saisir
-      # host/user/password à la main au premier login.
       - ./pgadmin/servers.json:/pgadmin4/servers.json:ro
     depends_on:
       db:
