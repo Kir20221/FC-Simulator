@@ -106,7 +106,8 @@ CREATE TABLE IF NOT EXISTS dataset (
     date_creation  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     nb_systemes    INTEGER NOT NULL,
     seed           INTEGER NOT NULL,
-    chemin_fichier TEXT NOT NULL,
+    chemin_planets TEXT,
+    chemin_events  TEXT,
     taille_octets  BIGINT NOT NULL,
     -- Stats calculées au moment de la génération (snapshot, pas recalculé).
     stats          JSONB NOT NULL

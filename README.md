@@ -1,6 +1,6 @@
 # FC-Simulator
 
-> Simulateur d'évolution de civilisations à l'échelle galactique, fondé sur une équation de FC-Simulator étendue.
+> Simulateur d'évolution de civilisations à l'échelle galactique, fondé sur une équation de Drake étendue.
 
 Sommes-nous seuls dans l'univers ? La question reste ouverte, et la formulation la plus connue — l'équation de Drake — propose un cadre pour estimer le nombre de civilisations détectables, mais elle reste statique : un produit de probabilités, pas une dynamique.
 

@@ -4,6 +4,11 @@ Zone habitable et facteurs de probabilité d'apparition de la vie.
 Le produit multiplicatif des facteurs ci-dessous donne P(vie | conditions).
 Chaque facteur est dans [0, 1], 1 signifiant « conditions favorables ».
 
+Refonte paramétrique : le facteur d'âge a été supprimé. Tous les systèmes
+naissent à T=0 dans la simulation, l'âge stellaire à l'apparition de la vie
+est encadré directement par la fenêtre [AGE_MIN_GA, durée_vie_étoile] dans
+life_model.py, sans facteur multiplicatif additionnel.
+
 Référence zone habitable : Kopparapu et al. 2013/2014 — bornes
 "moist greenhouse" (chaud) et "maximum greenhouse" (froid).
 """
@@ -14,13 +19,11 @@ from .distributions import Etoile, Planete
 
 
 # ============================================================================
-# CONSTANTES DE CALIBRATION
+# CONSTANTES DE CALIBRATION — ZONE HABITABLE
 # ============================================================================
 
 # Bornes Kopparapu 2013, exprimées en flux stellaire reçu (S/S_terre)
-# pour une étoile type Soleil (T_eff = 5780 K). Les corrections en
-# température suivent un polynôme du 4ème degré (Kopparapu 2013, eq. 2-3).
-# On utilise les bornes "moist greenhouse" (chaud) et "maximum greenhouse" (froid).
+# pour une étoile type Soleil (T_eff = 5780 K).
 S_EFF_SUN_CHAUD = 1.0140      # moist greenhouse à T=5780K
 S_EFF_SUN_FROID = 0.3438      # maximum greenhouse à T=5780K
 
@@ -29,18 +32,19 @@ S_EFF_SUN_FROID = 0.3438      # maximum greenhouse à T=5780K
 COEFS_KOPPARAPU_CHAUD = (8.1774e-5, 1.7063e-9, -4.3241e-12, -6.6462e-16)
 COEFS_KOPPARAPU_FROID = (5.8942e-5, 1.6558e-9, -3.0045e-12, -5.2983e-16)
 
-# Largeur de la décroissance gaussienne hors HZ (en unités de log10(distance)).
-# Petite valeur = chute brutale, grande valeur = transition douce.
+# Largeur de la décroissance gaussienne hors HZ (en log10(distance)).
 HZ_LARGEUR_LOG = 0.15
 
 # Bornes du domaine de validité Kopparapu : 2600 K à 7200 K.
-# En dehors, on extrapole prudemment (les O/B/A très chaudes restent pénalisées
-# par P_etoile, donc l'imprécision sur la HZ a peu d'effet).
 KOPPARAPU_T_MIN = 2600.0
 KOPPARAPU_T_MAX = 7200.0
 
+
+# ============================================================================
+# CONSTANTES DE CALIBRATION — AUTRES FACTEURS
+# ============================================================================
+
 # Facteur de masse planétaire : optimum gaussien centré sur 1 M_terre.
-# La planète doit retenir une atmosphère sans devenir mini-Neptune.
 MASSE_OPTIMUM_TERRE = 1.0
 MASSE_LARGEUR_LOG = 0.5  # en log10(M)
 
@@ -52,8 +56,6 @@ COMPOSITION_PROBA = {
 }
 
 # Facteur étoile : pénalité par type spectral.
-# Justifications : O/B/A — durée de vie trop courte, UV intense.
-# F/G/K — favorables. M — verrouillage de marée et flares (pénalité modérée).
 ETOILE_PROBA = {
     "O": 0.0,
     "B": 0.05,
@@ -63,10 +65,6 @@ ETOILE_PROBA = {
     "K": 0.95,
     "M": 0.4,
 }
-
-# Âge minimum requis pour qu'une vie ait pu apparaître (en Ga).
-# En dessous, conditions trop instables (formation, bombardement tardif).
-AGE_MIN_GA = 0.5
 
 
 # ============================================================================
@@ -127,8 +125,3 @@ def facteur_masse(planete: Planete) -> float:
 
 def facteur_etoile(etoile: Etoile) -> float:
     return ETOILE_PROBA.get(etoile.type_spectral, 0.0)
-
-
-def facteur_age(etoile: Etoile) -> float:
-    """1 si âge >= AGE_MIN_GA, 0 sinon. Coupure binaire simple."""
-    return 1.0 if etoile.age_Ga >= AGE_MIN_GA else 0.0

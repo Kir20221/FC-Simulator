@@ -1,12 +1,11 @@
 """
 Métadonnées des datasets d'entraînement.
 
-Style Active Record cohérent avec le reste du projet (cf. modélisation v2) :
-les méthodes de persistance sont sur le modèle lui-même, pas dans un
-repository séparé.
+Refonte multi-événements : un dataset est désormais composé de deux
+fichiers parquet (planets + events). Les deux chemins sont persistés
+en DB.
 
-Les fichiers parquet vivent sur disque (volume Docker), seules les
-métadonnées sont en DB.
+Style Active Record cohérent avec le reste du projet.
 """
 
 from datetime import datetime
@@ -25,7 +24,8 @@ class Dataset(BaseModel):
     date_creation: datetime
     nb_systemes: int
     seed: int
-    chemin_fichier: str
+    chemin_planets: str
+    chemin_events: str
     taille_octets: int
     stats: DatasetStats
 
@@ -40,15 +40,16 @@ class Dataset(BaseModel):
                 """
                 INSERT INTO dataset (
                     nom, date_creation, nb_systemes, seed,
-                    chemin_fichier, taille_octets, stats
-                ) VALUES (%s, %s, %s, %s, %s, %s, %s)
+                    chemin_planets, chemin_events, taille_octets, stats
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
                 """,
                 (
                     self.nom,
                     self.date_creation,
                     self.nb_systemes,
                     self.seed,
-                    self.chemin_fichier,
+                    self.chemin_planets,
+                    self.chemin_events,
                     self.taille_octets,
                     Jsonb(self.stats.model_dump()),
                 ),
@@ -56,7 +57,6 @@ class Dataset(BaseModel):
 
     @classmethod
     def get(cls, conn: Connection, nom: str) -> Optional["Dataset"]:
-        """Charge un dataset par son nom, ou None s'il n'existe pas."""
         with conn.cursor(row_factory=dict_row) as cur:
             cur.execute("SELECT * FROM dataset WHERE nom = %s", (nom,))
             row = cur.fetchone()
@@ -66,14 +66,12 @@ class Dataset(BaseModel):
 
     @classmethod
     def list_all(cls, conn: Connection) -> list["Dataset"]:
-        """Liste tous les datasets, du plus récent au plus ancien."""
         with conn.cursor(row_factory=dict_row) as cur:
             cur.execute("SELECT * FROM dataset ORDER BY date_creation DESC")
             return [cls(**row) for row in cur.fetchall()]
 
     @classmethod
     def delete(cls, conn: Connection, nom: str) -> bool:
-        """Supprime un dataset de la DB. Retourne True si supprimé."""
         with conn.cursor() as cur:
             cur.execute("DELETE FROM dataset WHERE nom = %s", (nom,))
             return cur.rowcount > 0

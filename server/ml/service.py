@@ -1,25 +1,20 @@
 """
 Couche service pour les datasets d'entraînement.
 
-Orchestration : génère le parquet (cœur métier) + persiste les
-métadonnées en DB. Appelée indifféremment depuis ml/api.py (HTTP) ou
-ml/cli.py (CLI).
-
-L'appelant fournit la connexion DB pour conserver le contrôle de la
-transaction, conformément au style décidé dans modélisation v2.
+Refonte multi-événements : un dataset = deux parquets (planets + events).
+La suppression supprime les deux fichiers + la ligne DB.
 """
 
 from datetime import datetime, timezone
-from typing import Optional
 
 from psycopg import Connection
 
 from .dataset import Dataset
 from .generator.generate import (
     DatasetGenerationRequest,
-    chemin_parquet,
+    chemins_parquet,
     generer_dataset,
-    supprimer_parquet,
+    supprimer_parquets,
 )
 
 
@@ -33,8 +28,7 @@ class DatasetIntrouvableError(Exception):
 
 def creer_dataset(conn: Connection, request: DatasetGenerationRequest) -> Dataset:
     """
-    Génère le parquet, calcule les stats, persiste les métadonnées en DB.
-    Échoue si un dataset du même nom existe déjà (en DB).
+    Génère les parquets, calcule les stats, persiste les métadonnées en DB.
     """
     if Dataset.get(conn, request.nom) is not None:
         raise DatasetExisteDejaError(f"Le dataset '{request.nom}' existe déjà.")
@@ -46,7 +40,8 @@ def creer_dataset(conn: Connection, request: DatasetGenerationRequest) -> Datase
         date_creation=datetime.now(timezone.utc),
         nb_systemes=request.nb_systemes,
         seed=request.seed,
-        chemin_fichier=str(resultat.chemin),
+        chemin_planets=str(resultat.chemin_planets),
+        chemin_events=str(resultat.chemin_events),
         taille_octets=resultat.taille_octets,
         stats=resultat.stats,
     )
@@ -67,11 +62,12 @@ def lire_dataset(conn: Connection, nom: str) -> Dataset:
 
 
 def supprimer_dataset(conn: Connection, nom: str) -> None:
-    """Supprime le dataset en DB et le fichier parquet associé."""
+    """Supprime le dataset en DB et les fichiers parquet associés."""
     dataset = Dataset.get(conn, nom)
     if dataset is None:
         raise DatasetIntrouvableError(f"Le dataset '{nom}' est introuvable.")
 
-    supprimer_parquet(chemin_parquet(nom))
+    chemin_p, chemin_e = chemins_parquet(nom)
+    supprimer_parquets(chemin_p, chemin_e)
     Dataset.delete(conn, nom)
     conn.commit()

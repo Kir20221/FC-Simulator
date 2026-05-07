@@ -1,15 +1,20 @@
 """
-Cœur métier du générateur de vérité — sans dépendance au transport
-(ni FastAPI, ni argparse). Appelé indifféremment depuis ml/api.py (HTTP)
-ou ml/cli.py (CLI).
+Cœur métier du générateur de vérité — version multi-événements.
 
-Convention : tout résultat retourné est sérialisable JSON pour faciliter
-l'usage HTTP. Les fonctions ne font pas d'I/O au-delà de l'écriture du
-parquet et de la lecture pour les stats.
+Refonte pour le Bloc B (TPP) :
+- Le dataset n'est plus un parquet unique « une ligne par planète » avec
+  étiquette one-shot, mais deux parquets :
+    * <nom>_planets.parquet : une ligne par planète, avec features +
+      durée d'observation T_obs.
+    * <nom>_events.parquet  : une ligne par événement, avec planet_id,
+      event_type_id, event_time.
+- Format long pour les événements (extensible à N types sans changer le
+  schéma).
+- Le code reste agnostique au nombre de types : life_model.EVENT_TYPES
+  est la seule source de vérité pour le référentiel.
 """
 
 from dataclasses import dataclass
-from datetime import datetime
 from pathlib import Path
 
 import numpy as np
@@ -19,143 +24,186 @@ from pydantic import BaseModel, Field
 from .distributions import (
     tirer_etoile,
     tirer_nombre_planetes,
+    tirer_parametres,
     tirer_planete,
 )
-from .life_model import evaluer_planete
+from .life_model import EVENT_TYPES, evaluer_planete
 
 
 # ============================================================================
 # CONSTANTES
 # ============================================================================
 
-# Racine où vivent les datasets. Le path est relatif au conteneur Docker,
-# qui monte ./data depuis l'hôte.
 RACINE_DATASETS = Path("/srv/data/training")
 
-# Champs du parquet de sortie. Ordre stable, types explicites.
-COLONNES_PARQUET = [
+# Schéma planète : features ML + horizon d'observation.
+# Note : les 4 paramètres astrophysiques restent dans le parquet pour
+# inspection et statistiques, mais ne seront PAS donnés en entrée au
+# modèle ML (cf. discussion « pas de fuite d'information »).
+COLONNES_PLANETS = [
+    "planet_id",
     "system_id",
+    # Paramètres astrophysiques (inspection seulement)
+    "param_masse_stellaire_moyenne",
+    "param_indice_tellurique",
+    "param_planetes_par_systeme_moyen",
+    "param_duree_simulation_Ga",
+    # Features étoile (entrées ML)
     "star_type",
     "star_temp_K",
     "star_mass_solar",
     "star_luminosity_solar",
-    "star_age_Ga",
     "star_lifetime_Ga",
+    # Features planète (entrées ML)
     "planet_distance_UA",
     "planet_mass_terre",
     "planet_radius_terre",
     "planet_composition",
+    # Horizon d'observation
+    "T_obs",
+    # Diagnostic
     "life_probability",
-    "life_appears",
-    "life_timecode",
     "f_HZ",
     "f_composition",
     "f_masse",
     "f_etoile",
-    "f_age",
+]
+
+# Schéma événements : un événement par ligne, format long.
+COLONNES_EVENTS = [
+    "planet_id",
+    "event_type_id",
+    "event_type_label",  # redondant avec id mais utile pour inspection
+    "event_time",        # en unités de timecode (100 000 ans)
 ]
 
 
 # ============================================================================
-# REQUEST / RESPONSE — SCHÉMAS PARTAGÉS CLI ET HTTP
+# REQUEST / RESPONSE
 # ============================================================================
 
 class DatasetGenerationRequest(BaseModel):
-    """Paramètres de génération d'un dataset. Validés côté HTTP par FastAPI,
-    instanciés côté CLI à partir des arguments argparse."""
-    nom: str = Field(..., description="Identifiant du dataset (ex: 'v1').")
-    nb_systemes: int = Field(..., ge=1, description="Nombre de systèmes solaires à générer.")
-    seed: int = Field(default=42, description="Graine aléatoire.")
+    nom: str = Field(..., description="Identifiant du dataset.")
+    nb_systemes: int = Field(..., ge=1)
+    seed: int = Field(default=42)
 
 
 class DatasetStats(BaseModel):
-    """Résumé statistique d'un dataset. Calculé après génération ou à la
-    demande sur un dataset existant."""
+    """Stats globales du dataset, agnostiques au nombre de types."""
     nb_systemes: int
     nb_planetes: int
+    nb_events_total: int
+    # Comptage par type d'événement (clé = libellé du type)
+    nb_events_par_type: dict[str, int]
+    # Nombre de planètes ayant produit 0, 1, 2, ... événements
+    distribution_evenements_par_planete: dict[str, int]
+    # Stats compositions / types spectraux (inchangées)
     nb_telluriques: int
     nb_glacees: int
     nb_gazeuses: int
-    nb_vie: int
-    taux_vie: float
-    proba_vie_moyenne: float
-    proba_vie_max: float
     repartition_types_spectraux: dict[str, int]
-    vie_par_type_spectral: dict[str, dict]
 
 
 # ============================================================================
-# GÉNÉRATION (COEUR PUR — PAS D'I/O)
+# GÉNÉRATION (CŒUR PUR — PAS D'I/O)
 # ============================================================================
 
-def generer_dataframe(nb_systemes: int, seed: int) -> pd.DataFrame:
-    """Produit le DataFrame en mémoire. Pas d'écriture disque ici."""
+def generer_dataframes(
+    nb_systemes: int,
+    seed: int,
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """
+    Produit les deux DataFrames en mémoire (planètes + événements).
+    """
     rng = np.random.default_rng(seed)
-    lignes = []
+
+    lignes_planetes: list[dict] = []
+    lignes_events: list[dict] = []
+    planet_id_counter = 0
 
     for sys_id in range(nb_systemes):
-        etoile = tirer_etoile(rng)
-        nb_planetes = tirer_nombre_planetes(rng)
+        params = tirer_parametres(rng)
+        etoile = tirer_etoile(rng, params)
+        nb_planetes = tirer_nombre_planetes(rng, params)
 
         for _ in range(nb_planetes):
-            planete = tirer_planete(rng)
-            res = evaluer_planete(etoile, planete, rng)
+            planete = tirer_planete(rng, params)
+            res = evaluer_planete(etoile, planete, params, rng)
+            pid = planet_id_counter
+            planet_id_counter += 1
 
-            lignes.append({
+            lignes_planetes.append({
+                "planet_id": pid,
                 "system_id": sys_id,
+                "param_masse_stellaire_moyenne": params.masse_stellaire_moyenne,
+                "param_indice_tellurique": params.indice_tellurique,
+                "param_planetes_par_systeme_moyen": params.planetes_par_systeme_moyen,
+                "param_duree_simulation_Ga": params.duree_simulation_Ga,
                 "star_type": etoile.type_spectral,
                 "star_temp_K": etoile.temperature_K,
                 "star_mass_solar": etoile.masse_solaire,
                 "star_luminosity_solar": etoile.luminosite_solaire,
-                "star_age_Ga": etoile.age_Ga,
                 "star_lifetime_Ga": etoile.duree_vie_Ga,
                 "planet_distance_UA": planete.distance_UA,
                 "planet_mass_terre": planete.masse_terre,
                 "planet_radius_terre": planete.rayon_terre,
                 "planet_composition": planete.composition,
+                "T_obs": res.T_obs,
                 "life_probability": res.proba_vie,
-                "life_appears": res.vie_apparait,
-                "life_timecode": res.timecode_apparition if res.timecode_apparition is not None else -1,
                 "f_HZ": res.f_HZ,
                 "f_composition": res.f_composition,
                 "f_masse": res.f_masse,
                 "f_etoile": res.f_etoile,
-                "f_age": res.f_age,
             })
 
-    return pd.DataFrame(lignes, columns=COLONNES_PARQUET)
+            for evt in res.evenements:
+                lignes_events.append({
+                    "planet_id": pid,
+                    "event_type_id": evt.type_id,
+                    "event_type_label": evt.type_libelle,
+                    "event_time": evt.timecode,
+                })
+
+    df_planets = pd.DataFrame(lignes_planetes, columns=COLONNES_PLANETS)
+    df_events = pd.DataFrame(lignes_events, columns=COLONNES_EVENTS)
+    return df_planets, df_events
 
 
-def calculer_stats(df: pd.DataFrame) -> DatasetStats:
-    """Résumé statistique d'un DataFrame de planètes."""
-    nb_planetes = len(df)
-    nb_vie = int(df["life_appears"].sum())
+def calculer_stats(df_planets: pd.DataFrame, df_events: pd.DataFrame) -> DatasetStats:
+    """Statistiques agrégées."""
+    nb_planetes = len(df_planets)
 
-    vie_par_type_df = df.groupby("star_type")["life_appears"].agg(["sum", "count"])
-    vie_par_type_df["taux"] = vie_par_type_df["sum"] / vie_par_type_df["count"]
-    vie_par_type = {
-        str(idx): {
-            "vie": int(row["sum"]),
-            "total": int(row["count"]),
-            "taux": float(row["taux"]),
-        }
-        for idx, row in vie_par_type_df.iterrows()
-    }
+    # Comptage par type d'événement (toutes les clés présentes,
+    # même si un type a 0 occurrence — utile pour inspecter le dataset)
+    nb_par_type = {label: 0 for label in EVENT_TYPES}
+    if len(df_events) > 0:
+        counts = df_events["event_type_label"].value_counts().to_dict()
+        for k, v in counts.items():
+            nb_par_type[str(k)] = int(v)
+
+    # Distribution du nombre d'événements par planète.
+    if len(df_events) > 0:
+        nb_par_planete = df_events.groupby("planet_id").size()
+        # Inclure les planètes sans événement.
+        full = pd.Series(0, index=df_planets["planet_id"])
+        full.update(nb_par_planete)
+        distrib = full.value_counts().sort_index().to_dict()
+    else:
+        distrib = {0: nb_planetes}
+    distrib_str = {str(int(k)): int(v) for k, v in distrib.items()}
 
     return DatasetStats(
-        nb_systemes=int(df["system_id"].nunique()),
+        nb_systemes=int(df_planets["system_id"].nunique()),
         nb_planetes=nb_planetes,
-        nb_telluriques=int((df["planet_composition"] == "tellurique").sum()),
-        nb_glacees=int((df["planet_composition"] == "glacee").sum()),
-        nb_gazeuses=int((df["planet_composition"] == "gazeuse").sum()),
-        nb_vie=nb_vie,
-        taux_vie=float(nb_vie / nb_planetes) if nb_planetes else 0.0,
-        proba_vie_moyenne=float(df["life_probability"].mean()),
-        proba_vie_max=float(df["life_probability"].max()),
+        nb_events_total=int(len(df_events)),
+        nb_events_par_type=nb_par_type,
+        distribution_evenements_par_planete=distrib_str,
+        nb_telluriques=int((df_planets["planet_composition"] == "tellurique").sum()),
+        nb_glacees=int((df_planets["planet_composition"] == "glacee").sum()),
+        nb_gazeuses=int((df_planets["planet_composition"] == "gazeuse").sum()),
         repartition_types_spectraux={
-            str(k): int(v) for k, v in df["star_type"].value_counts().items()
+            str(k): int(v) for k, v in df_planets["star_type"].value_counts().items()
         },
-        vie_par_type_spectral=vie_par_type,
     )
 
 
@@ -163,52 +211,67 @@ def calculer_stats(df: pd.DataFrame) -> DatasetStats:
 # I/O DISQUE
 # ============================================================================
 
-def chemin_parquet(nom: str) -> Path:
-    return RACINE_DATASETS / f"{nom}_planetes.parquet"
+def chemins_parquet(nom: str) -> tuple[Path, Path]:
+    """Retourne (chemin_planets, chemin_events)."""
+    return (
+        RACINE_DATASETS / f"{nom}_planets.parquet",
+        RACINE_DATASETS / f"{nom}_events.parquet",
+    )
 
 
-def ecrire_parquet(df: pd.DataFrame, chemin: Path) -> None:
-    chemin.parent.mkdir(parents=True, exist_ok=True)
-    df.to_parquet(chemin, engine="pyarrow", compression="snappy", index=False)
+def ecrire_parquets(
+    df_planets: pd.DataFrame,
+    df_events: pd.DataFrame,
+    chemin_planets: Path,
+    chemin_events: Path,
+) -> None:
+    chemin_planets.parent.mkdir(parents=True, exist_ok=True)
+    df_planets.to_parquet(chemin_planets, engine="pyarrow", compression="snappy", index=False)
+    df_events.to_parquet(chemin_events, engine="pyarrow", compression="snappy", index=False)
 
 
-def lire_parquet(chemin: Path) -> pd.DataFrame:
-    return pd.read_parquet(chemin, engine="pyarrow")
+def lire_parquets(chemin_planets: Path, chemin_events: Path) -> tuple[pd.DataFrame, pd.DataFrame]:
+    return (
+        pd.read_parquet(chemin_planets, engine="pyarrow"),
+        pd.read_parquet(chemin_events, engine="pyarrow"),
+    )
 
 
-def supprimer_parquet(chemin: Path) -> None:
-    if chemin.exists():
-        chemin.unlink()
+def supprimer_parquets(chemin_planets: Path, chemin_events: Path) -> None:
+    if chemin_planets.exists():
+        chemin_planets.unlink()
+    if chemin_events.exists():
+        chemin_events.unlink()
 
 
 # ============================================================================
-# RÉSULTAT D'UNE GÉNÉRATION (sans persistance DB — celle-ci est ajoutée
-# par la couche appelante)
+# RÉSULTAT D'UNE GÉNÉRATION
 # ============================================================================
 
 @dataclass
 class ResultatGeneration:
     nom: str
-    chemin: Path
-    taille_octets: int
+    chemin_planets: Path
+    chemin_events: Path
+    taille_octets: int  # somme des deux fichiers
     stats: DatasetStats
     request: DatasetGenerationRequest
 
 
 def generer_dataset(request: DatasetGenerationRequest) -> ResultatGeneration:
-    """
-    Génère un dataset, l'écrit sur disque, calcule ses stats. Retourne tout
-    ce qu'il faut à la couche appelante pour persister les métadonnées en DB.
-    """
-    df = generer_dataframe(request.nb_systemes, request.seed)
-    chemin = chemin_parquet(request.nom)
-    ecrire_parquet(df, chemin)
-    stats = calculer_stats(df)
+    """Génère, écrit, calcule les stats."""
+    df_planets, df_events = generer_dataframes(request.nb_systemes, request.seed)
+    chemin_planets, chemin_events = chemins_parquet(request.nom)
+    ecrire_parquets(df_planets, df_events, chemin_planets, chemin_events)
+    stats = calculer_stats(df_planets, df_events)
+
+    taille_totale = chemin_planets.stat().st_size + chemin_events.stat().st_size
 
     return ResultatGeneration(
         nom=request.nom,
-        chemin=chemin,
-        taille_octets=chemin.stat().st_size,
+        chemin_planets=chemin_planets,
+        chemin_events=chemin_events,
+        taille_octets=taille_totale,
         stats=stats,
         request=request,
     )
