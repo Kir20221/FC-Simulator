@@ -1,6 +1,6 @@
 -- init.sql
 -- ============================================================
--- Projet Drake — Schéma initial
+-- Projet FC-Simulator — Schéma initial
 -- ============================================================
 
 -- ---------- Zone scénario --------------------------------------------------
@@ -12,15 +12,12 @@ CREATE TABLE scenario (
     statut_entites  TEXT        NOT NULL DEFAULT 'en_attente'
         CHECK (statut_entites IN ('en_attente', 'en_cours', 'termine', 'echec')),
 
-    r_star  DOUBLE PRECISION NOT NULL,
-    fp      DOUBLE PRECISION NOT NULL,
-    ne      DOUBLE PRECISION NOT NULL,
-    fl      DOUBLE PRECISION NOT NULL,
-    fi      DOUBLE PRECISION NOT NULL,
-    fc      DOUBLE PRECISION NOT NULL,
-    l_drake DOUBLE PRECISION NOT NULL,
+    masse_stellaire_moyenne     DOUBLE PRECISION NOT NULL CHECK (masse_stellaire_moyenne > 0),
+    indice_tellurique           DOUBLE PRECISION NOT NULL CHECK (indice_tellurique BETWEEN 0 AND 1),
+    planetes_par_systeme_moyen  DOUBLE PRECISION NOT NULL CHECK (planetes_par_systeme_moyen > 0),
+    duree_simulation_Ga         DOUBLE PRECISION NOT NULL CHECK (duree_simulation_Ga > 0),
 
-    nombre_systemes BIGINT NOT NULL CHECK (nombre_systemes > 0)
+    nb_systemes BIGINT NOT NULL CHECK (nb_systemes > 0)
 );
 
 CREATE TABLE simulation (
@@ -54,16 +51,25 @@ CREATE TABLE systeme_solaire (
 CREATE INDEX idx_systeme_galaxie ON systeme_solaire(galaxie_id);
 
 CREATE TABLE etoile (
-    id         BIGSERIAL PRIMARY KEY,
-    systeme_id BIGINT NOT NULL REFERENCES systeme_solaire(id)
+    id                      BIGSERIAL PRIMARY KEY,
+    systeme_id              BIGINT NOT NULL REFERENCES systeme_solaire(id),
+    star_type               TEXT             NOT NULL,
+    star_temp_K             DOUBLE PRECISION NOT NULL,
+    star_mass_solar         DOUBLE PRECISION NOT NULL,
+    star_luminosity_solar   DOUBLE PRECISION NOT NULL,
+    star_lifetime_Ga        DOUBLE PRECISION NOT NULL
 );
 
 CREATE INDEX idx_etoile_systeme ON etoile(systeme_id);
 
 CREATE TABLE planete (
-    id         BIGSERIAL PRIMARY KEY,
-    systeme_id BIGINT NOT NULL REFERENCES systeme_solaire(id),
-    etoile_id  BIGINT NOT NULL REFERENCES etoile(id)
+    id                      BIGSERIAL PRIMARY KEY,
+    systeme_id              BIGINT NOT NULL REFERENCES systeme_solaire(id),
+    etoile_id               BIGINT NOT NULL REFERENCES etoile(id),
+    planet_distance_UA      DOUBLE PRECISION NOT NULL,
+    planet_mass_terre       DOUBLE PRECISION NOT NULL,
+    planet_radius_terre     DOUBLE PRECISION NOT NULL,
+    planet_composition      TEXT             NOT NULL
 );
 
 CREATE INDEX idx_planete_systeme ON planete(systeme_id);
@@ -77,11 +83,8 @@ CREATE TABLE type_evenement (
 );
 
 INSERT INTO type_evenement (libelle) VALUES
-    ('emergence_vie'),
-    ('emergence_civilisation'),
-    ('extinction'),
-    ('expansion'),
-    ('contact');
+    ('life_apparition'),
+    ('star_main_sequence_end');
 
 CREATE TABLE evenement (
     id                 BIGSERIAL PRIMARY KEY,
@@ -112,11 +115,11 @@ CREATE TABLE IF NOT EXISTS dataset (
     -- Stats calculées au moment de la génération (snapshot, pas recalculé).
     stats          JSONB NOT NULL
 );
- 
+
 -- Index sur la date pour lister du plus récent au plus ancien.
 CREATE INDEX IF NOT EXISTS idx_dataset_date_creation
     ON dataset (date_creation DESC);
- 
+
 -- table 'model' pour les métadonnées des modèles entraînés.
 CREATE TABLE IF NOT EXISTS model (
     nom               TEXT PRIMARY KEY,

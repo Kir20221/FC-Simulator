@@ -12,6 +12,12 @@ Refonte pour le Bloc B (TPP) :
   schéma).
 - Le code reste agnostique au nombre de types : life_model.EVENT_TYPES
   est la seule source de vérité pour le référentiel.
+
+Refonte option b (cohérence scénario / dataset) :
+- Le tirage d'un système est extrait dans `generer_systeme` qui prend
+  `params` en argument. Le mode dataset tire `params` par système avant
+  d'appeler ; le mode scénario fournit directement `params` (les mêmes
+  pour tous les systèmes du scénario).
 """
 
 from dataclasses import dataclass
@@ -22,12 +28,15 @@ import pandas as pd
 from pydantic import BaseModel, Field
 
 from .distributions import (
+    Etoile,
+    ParametresAstrophysiques,
+    Planete,
     tirer_etoile,
     tirer_nombre_planetes,
     tirer_parametres,
     tirer_planete,
 )
-from .life_model import EVENT_TYPES, evaluer_planete
+from .life_model import EVENT_TYPES, ResultatPlanete, evaluer_planete
 
 
 # ============================================================================
@@ -109,7 +118,41 @@ class DatasetStats(BaseModel):
 
 
 # ============================================================================
-# GÉNÉRATION (CŒUR PUR — PAS D'I/O)
+# TIRAGE D'UN SYSTÈME (cœur factorisé pour dataset ET scénario)
+# ============================================================================
+
+@dataclass
+class SystemeTire:
+    """
+    Substrat d'un système (étoile + planètes), sans événements.
+    Utilisé par les deux chemins :
+    - Génération de dataset : sera complété par evaluer_planete().
+    - Génération d'entités d'un scénario : persisté en DB tel quel.
+      Les événements seront produits ultérieurement par le moteur de
+      simulation, qui rappellera evaluer_planete() à partir des entités
+      relues depuis la DB.
+    """
+    params: ParametresAstrophysiques
+    etoile: Etoile
+    planetes: list[Planete]
+
+
+def tirer_systeme(
+    rng: np.random.Generator,
+    params: ParametresAstrophysiques,
+) -> SystemeTire:
+    """
+    Tire un système complet (étoile + planètes) à partir de paramètres
+    astrophysiques fixés. Pure fonction du rng et de params.
+    """
+    etoile = tirer_etoile(rng, params)
+    nb_planetes = tirer_nombre_planetes(rng, params)
+    planetes = [tirer_planete(rng, params) for _ in range(nb_planetes)]
+    return SystemeTire(params=params, etoile=etoile, planetes=planetes)
+
+
+# ============================================================================
+# GÉNÉRATION DATASET (CŒUR PUR — PAS D'I/O)
 # ============================================================================
 
 def generer_dataframes(
@@ -118,6 +161,8 @@ def generer_dataframes(
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     """
     Produit les deux DataFrames en mémoire (planètes + événements).
+    Mode dataset : les paramètres astrophysiques sont tirés par système
+    pour balayer l'espace paramétrique.
     """
     rng = np.random.default_rng(seed)
 
@@ -127,39 +172,16 @@ def generer_dataframes(
 
     for sys_id in range(nb_systemes):
         params = tirer_parametres(rng)
-        etoile = tirer_etoile(rng, params)
-        nb_planetes = tirer_nombre_planetes(rng, params)
+        systeme = tirer_systeme(rng, params)
 
-        for _ in range(nb_planetes):
-            planete = tirer_planete(rng, params)
-            res = evaluer_planete(etoile, planete, params, rng)
+        for planete in systeme.planetes:
+            res = evaluer_planete(systeme.etoile, planete, params, rng)
             pid = planet_id_counter
             planet_id_counter += 1
 
-            lignes_planetes.append({
-                "planet_id": pid,
-                "system_id": sys_id,
-                "param_masse_stellaire_moyenne": params.masse_stellaire_moyenne,
-                "param_indice_tellurique": params.indice_tellurique,
-                "param_planetes_par_systeme_moyen": params.planetes_par_systeme_moyen,
-                "param_duree_simulation_Ga": params.duree_simulation_Ga,
-                "star_type": etoile.type_spectral,
-                "star_temp_K": etoile.temperature_K,
-                "star_mass_solar": etoile.masse_solaire,
-                "star_luminosity_solar": etoile.luminosite_solaire,
-                "star_lifetime_Ga": etoile.duree_vie_Ga,
-                "planet_distance_UA": planete.distance_UA,
-                "planet_mass_terre": planete.masse_terre,
-                "planet_radius_terre": planete.rayon_terre,
-                "planet_composition": planete.composition,
-                "T_obs": res.T_obs,
-                "life_probability": res.proba_vie,
-                "f_HZ": res.f_HZ,
-                "f_composition": res.f_composition,
-                "f_masse": res.f_masse,
-                "f_etoile": res.f_etoile,
-            })
-
+            lignes_planetes.append(_ligne_planete(
+                pid, sys_id, params, systeme.etoile, planete, res,
+            ))
             for evt in res.evenements:
                 lignes_events.append({
                     "planet_id": pid,
@@ -171,6 +193,40 @@ def generer_dataframes(
     df_planets = pd.DataFrame(lignes_planetes, columns=COLONNES_PLANETS)
     df_events = pd.DataFrame(lignes_events, columns=COLONNES_EVENTS)
     return df_planets, df_events
+
+
+def _ligne_planete(
+    pid: int,
+    sys_id: int,
+    params: ParametresAstrophysiques,
+    etoile: Etoile,
+    planete: Planete,
+    res: ResultatPlanete,
+) -> dict:
+    """Sérialise les features d'une planète en dict (helper interne)."""
+    return {
+        "planet_id": pid,
+        "system_id": sys_id,
+        "param_masse_stellaire_moyenne": params.masse_stellaire_moyenne,
+        "param_indice_tellurique": params.indice_tellurique,
+        "param_planetes_par_systeme_moyen": params.planetes_par_systeme_moyen,
+        "param_duree_simulation_Ga": params.duree_simulation_Ga,
+        "star_type": etoile.type_spectral,
+        "star_temp_K": etoile.temperature_K,
+        "star_mass_solar": etoile.masse_solaire,
+        "star_luminosity_solar": etoile.luminosite_solaire,
+        "star_lifetime_Ga": etoile.duree_vie_Ga,
+        "planet_distance_UA": planete.distance_UA,
+        "planet_mass_terre": planete.masse_terre,
+        "planet_radius_terre": planete.rayon_terre,
+        "planet_composition": planete.composition,
+        "T_obs": res.T_obs,
+        "life_probability": res.proba_vie,
+        "f_HZ": res.f_HZ,
+        "f_composition": res.f_composition,
+        "f_masse": res.f_masse,
+        "f_etoile": res.f_etoile,
+    }
 
 
 def calculer_stats(df_planets: pd.DataFrame, df_events: pd.DataFrame) -> DatasetStats:
