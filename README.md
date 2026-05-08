@@ -31,7 +31,6 @@ Ce qui n'est pas dans le prototype :
 - Intégration du modèle entraîné dans la chaîne de simulation (préalable : enrichir le schéma des entités avec les features physiques).
 - IHM Unity.
 
-
 > **évolutions futures**
 - ajout de types d'événements (impacts cométaires majeurs, supernovae, émergence de civilisations, contacts inter-civilisations, expansions) et de leurs interdépendances temporelles. Le format de stockage et l'architecture ML sont conçus pour absorber ces extensions sans refonte
 - analyse a posteriori de runs simulés pour produire des solutions au paradoxe de Fermi (vide, contact, extinction)
