@@ -42,7 +42,7 @@ L'architecture est conçue pour la cible 100 à 400 milliards de systèmes solai
 
 ### Modèle événementiel
 
-L'état de la galaxie se reconstitue par rejeu d'un journal d'événements ordonnés.
+L'état de la galaxie se reconstitue par rejeu du journal des événements.
 
 ### Apprentissage par processus ponctuel temporel (TPP)
 
