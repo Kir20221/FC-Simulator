@@ -1,6 +1,6 @@
 # FC-Simulator
 
-> Simulateur d'événements à l'échelle de notre voie lactée, des éléments astrophysiques (astres, systèmes solaiures, etc.) aux civilisations et leur dynamique.
+> Simulateur d'événements à l'échelle de notre voie lactée, des éléments astrophysiques (astres, systèmes solaires, etc.) aux civilisations et leur dynamique.
 
 Sommes-nous seuls dans l'univers ?
 FC-Simulator simule des **chronologies d'événements** qui peuvent se produire dans notre galaxie (apparition des systèmes solaires, de la vie, fin de vie d'une étoile, premiers contacts, extinctions, etc.). Fonctionnellement, le projet a été guidé par la volonté de proposer :
@@ -16,7 +16,7 @@ Ainsi, les ambitions scientifiques affichées (Drake, Fermi) rendent l'exercice 
 
 ## Philosophie du simulateur
 
-1. **Construction de la galxie** — l'utilisateur fixe les paramètres astrophysiques. Le générateur produit alors une galaxie : étoiles avec leurs propriétés physiques, planètes avec leurs caractéristiques, zones habitables calculées, etc.
+1. **Construction de la galaxie** — l'utilisateur fixe les paramètres astrophysiques. Le générateur produit alors une galaxie : étoiles avec leurs propriétés physiques, planètes avec leurs caractéristiques, zones habitables calculées, etc.
 
 2. **Survenue dynamique des événements** — le moteur produit un journal d'événements ordonnés dans le temps (timecode). Le journal est en append : l'état de la galaxie à un instant T se reconstitue en rejouant les événements jusqu'à T.
 
@@ -43,10 +43,11 @@ L'architecture est conçue pour la cible 100 à 400 milliards de systèmes solai
 ### Modèle événementiel
 
 L'état de la galaxie se reconstitue par rejeu du journal des événements.
+Côté IHM, la simulation Unity est conçue pour rejouer cette chronologie de façon dynamique, avec contrôle du timecode (lecture, pause, navigation), et 3 niveaux de zoom conçus comme des interfaces d'exploration. L'utilisateur ne voit pas une galaxie figée, il assiste à son évolution. On peut explorer les résultats avec un regard technique ML ou causalitées astrophysiques. 
 
 ### Apprentissage par processus ponctuel temporel (TPP)
 
-Le moteur ML qui prédit les événements est un **Transformer Hawkes Process** (parfait pour prédire une chaîne d'événements interdépendants), conditionné sur les features physiques (étoiles, planetes) et leurs carctéristiques (masse, orbite, etc.). Pour chaque planète, le modèle apprend une fonction d'intensité par type d'événement selon l'historique des événements antérieurs (un contact ne peut survenir qu'après l'émergence d'une civilisation, qui ne peut survenir qu'après l'apparition de la vie).
+Le moteur ML qui prédit les événements est un **Transformer Hawkes Process** (parfait pour prédire une chaîne d'événements interdépendants), conditionné sur les features physiques (étoiles, planetes) et leurs caractéristiques (masse, orbite, etc.). Pour chaque planète, le modèle apprend une fonction d'intensité par type d'événement selon l'historique des événements antérieurs (un contact ne peut survenir qu'après l'émergence d'une civilisation, qui ne peut survenir qu'après l'apparition de la vie).
 
 ## Architecture
 
