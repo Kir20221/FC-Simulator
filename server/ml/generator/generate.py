@@ -95,8 +95,12 @@ class DatasetStats(BaseModel):
     nb_events_total: int
     # Comptage par type d'événement (clé = libellé du type)
     nb_events_par_type: dict[str, int]
-    # Nombre de planètes ayant produit 0, 1, 2, ... événements
-    distribution_evenements_par_planete: dict[str, int]
+    # Distribution des chaînes d'événements observées.
+    # Clé = chaîne ordonnée par timecode, formée des libellés de types
+    # séparés par " -> " (ex: "life_apparition -> star_main_sequence_end").
+    # La chaîne vide "" représente les planètes sans événement.
+    # Cette représentation reste lisible quel que soit le nombre de types.
+    chaines_observees: dict[str, int]
     # Stats compositions / types spectraux (inchangées)
     nb_telluriques: int
     nb_glacees: int
@@ -181,23 +185,24 @@ def calculer_stats(df_planets: pd.DataFrame, df_events: pd.DataFrame) -> Dataset
         for k, v in counts.items():
             nb_par_type[str(k)] = int(v)
 
-    # Distribution du nombre d'événements par planète.
+    # Distribution des chaînes d'événements observées (par planète).
+    # On agrège les événements par planet_id, ordonnés par event_time, puis
+    # on forme la chaîne lisible "type1 -> type2 -> ...". Les planètes sans
+    # événement sont représentées par la chaîne vide "".
+    chaines_planetes: dict[int, str] = {pid: "" for pid in df_planets["planet_id"]}
     if len(df_events) > 0:
-        nb_par_planete = df_events.groupby("planet_id").size()
-        # Inclure les planètes sans événement.
-        full = pd.Series(0, index=df_planets["planet_id"])
-        full.update(nb_par_planete)
-        distrib = full.value_counts().sort_index().to_dict()
-    else:
-        distrib = {0: nb_planetes}
-    distrib_str = {str(int(k)): int(v) for k, v in distrib.items()}
+        events_tries = df_events.sort_values(["planet_id", "event_time"])
+        for pid, grp in events_tries.groupby("planet_id"):
+            chaines_planetes[int(pid)] = " -> ".join(grp["event_type_label"].tolist())
+    chaines = pd.Series(list(chaines_planetes.values())).value_counts().to_dict()
+    chaines_observees = {str(k): int(v) for k, v in chaines.items()}
 
     return DatasetStats(
         nb_systemes=int(df_planets["system_id"].nunique()),
         nb_planetes=nb_planetes,
         nb_events_total=int(len(df_events)),
         nb_events_par_type=nb_par_type,
-        distribution_evenements_par_planete=distrib_str,
+        chaines_observees=chaines_observees,
         nb_telluriques=int((df_planets["planet_composition"] == "tellurique").sum()),
         nb_glacees=int((df_planets["planet_composition"] == "glacee").sum()),
         nb_gazeuses=int((df_planets["planet_composition"] == "gazeuse").sum()),

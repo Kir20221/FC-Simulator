@@ -117,3 +117,19 @@ CREATE TABLE IF NOT EXISTS dataset (
 CREATE INDEX IF NOT EXISTS idx_dataset_date_creation
     ON dataset (date_creation DESC);
  
+-- table 'model' pour les métadonnées des modèles entraînés.
+CREATE TABLE IF NOT EXISTS model (
+    nom               TEXT PRIMARY KEY,
+    date_creation     TIMESTAMPTZ NOT NULL,
+    dataset_nom       TEXT NOT NULL,                  -- nom du dataset utilisé pour l'entraînement
+    chemin_fichier    TEXT NOT NULL,                  -- chemin du .pth dans le volume
+    taille_octets     BIGINT NOT NULL,
+    duree_entrainement_s  DOUBLE PRECISION NOT NULL,
+    -- Hyperparamètres et métriques sérialisés en JSONB.
+    -- Permet d'ajouter des champs au schéma sans migration.
+    training_config   JSONB NOT NULL,                 -- TrainingConfig.__dict__
+    tpp_config        JSONB NOT NULL,                 -- TPPConfig.__dict__
+    metrics_par_epoch JSONB NOT NULL,                 -- list[dict]
+    final_train_loss  DOUBLE PRECISION NOT NULL,
+    final_val_loss    DOUBLE PRECISION NOT NULL
+);
