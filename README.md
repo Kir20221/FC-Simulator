@@ -3,33 +3,35 @@
 > Simulateur d'événements à l'échelle de notre voie lactée, des éléments astrophysiques (astres, systèmes solaiures, etc.) aux civilisations et leur dynamique.
 
 Sommes-nous seuls dans l'univers ?
-FC-Simulator simule des **chronologies d'événements** qui peuvent se produire dans une galaxie (apparition de la vie, fin de vie d'une étoile, premiers contacts, extinctions, etc.). Les variables de Drake (taux d'apparition de la vie, durée de vie des civilisations, etc.) et résolutions du paradoxe de Fermi (pourquoi les extra terrestres e sont pas déjà là ?) **émergent** du jeu d'événements simulé.
+FC-Simulator simule des **chronologies d'événements** qui peuvent se produire dans notre galaxie (apparition des systèmes solaires, de la vie, fin de vie d'une étoile, premiers contacts, extinctions, etc.). Fonctionnellement, le projet a été guidé par la volonté de proposer :
+- l'émergence de valeurs pour les variables de [l'équation de Drake](https://fr.wikipedia.org/wiki/%C3%89quation_de_Drake) => estimation du nombre de civilisations dans notre galaxie
+- quelques résolutions du [paradoxe de Fermi](https://fr.wikipedia.org/wiki/Paradoxe_de_Fermi) => pourquoi les extra terrestres ne sont pas déjà là ?
 
-Ceci est d'abord un projet technique (Data Science et Machine Learning) d'apprentissage et d'exploration. Les ambitions scientifiques affichées (Drake, Fermi, l'apparition de la vie) rendent l'exercice intéressant, mais ne sont pas un objectif final que ce prototype prétendrait atteindre, évidemment ! Cela-dit, la calibration scientifique (zones habitables, distributions stellaires, relations masse-rayon, évènements interdépendants) tente de suivre au mieux l'état de l'art scientifiaue actuel. Notamment, le projet laisse un paramétrage important à l'utilisateur sur toute la chains du pipeline (de la création du dataset source, l'entrainement et la simulation elle-même).
+Mais restons humbles, ce projet est d'abord un projet d'exploration technique (Machine Learning, représentation visuelle dynamique) porté par 3 objectifs :
+- **exploration de technologies** (voir stack technique plus bas)
+- implémentation d'une simulation totalement **paramétrée de bout en bout** du pipeline par l'utilisateur
+- IHM dynamique sur **Unity** pour une immersion visuelle et ludique des prédictions
+
+Ainsi, les ambitions scientifiques affichées (Drake, Fermi) rendent l'exercice intéressant, mais ne sont pas un objectif final que ce prototype prétendrait atteindre, évidemment ! Cela-dit, la calibration scientifique (zones habitables, distributions stellaires, relations masse-rayon, évènements interdépendants) tente de suivre au mieux l'état de l'art scientifique actuel, comme le **suivi d'une spécification client**.
 
 ## Philosophie du simulateur
 
-1. **Construction de la galxie** — l'utilisateur fixe les paramètres astrophysiques (masse stellaire moyenne, indice tellurique, nombre moyen de planètes par système, durée de simulation). Le générateur produit alors une galaxie : étoiles avec leurs propriétés physiques, planètes avec leurs caractéristiques, zones habitables calculées par les polynômes de Kopparapu, etc.
+1. **Construction de la galxie** — l'utilisateur fixe les paramètres astrophysiques. Le générateur produit alors une galaxie : étoiles avec leurs propriétés physiques, planètes avec leurs caractéristiques, zones habitables calculées, etc.
 
-2. **Survenue dynamique des événements** — le moteur produit un journal d'événements ordonnés dans le temps (timecode). Chaque événement est attaché à une entité (galaxie, étoile, planète, etc.). Le journal est en append : l'état de la galaxie à un instant T se reconstitue en rejouant les événements jusqu'à T.
+2. **Survenue dynamique des événements** — le moteur produit un journal d'événements ordonnés dans le temps (timecode). Le journal est en append : l'état de la galaxie à un instant T se reconstitue en rejouant les événements jusqu'à T.
 
 3. **Exploration** — l'IHM Unity permet d'explorer la simulation à trois échelles : galaxie entière (densités, signalement d'événements), système solaire, planète individuelle, tout au long des timecodes.
 
-L'architecture est conçue pour la cible 100 à 400 milliards de systèmes solaires (consensus actuel du nombre de systèmes dans noter galaxie).
+L'architecture est conçue pour la cible 100 à 400 milliards de systèmes solaires (consensus actuel du nombre de systèmes dans notre galaxie), selon les paramètres choisis par l'utilisateur.
 
 ## Périmètre du prototype
 
 - Stack Docker complète (Postgres + FastAPI), schéma DB stable
-- Génération des éléments galactique paramétrés, calibrés scientifiquement
-- Générateur de vérité terrain : produit des datasets parquet de planètes étiquetées avec leurs séquences d'événements
+- Génération des éléments galactiques
+- Générateur du dataset
 - Modèle ML d'apprentissage de la suite des évènements
 - Pipeline d'entraînement complet
 - Deux types d'événements implémentés pour l'instant : **apparition de la vie** sur une planète, **fin de séquence principale** d'une étoile.
-
-Ce qui n'est pas dans le prototype :
-
-- Intégration du modèle entraîné dans la chaîne de simulation (préalable : enrichir le schéma des entités avec les features physiques).
-- IHM Unity.
 
 > **évolutions futures**
 - ajout de types d'événements (impacts cométaires majeurs, supernovae, émergence de civilisations, contacts inter-civilisations, expansions) et de leurs interdépendances temporelles. Le format de stockage et l'architecture ML sont conçus pour absorber ces extensions sans refonte
