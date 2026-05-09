@@ -22,7 +22,7 @@ CREATE TABLE scenario (
 
 CREATE TABLE simulation (
     id              BIGSERIAL PRIMARY KEY,
-    scenario_id     BIGINT      NOT NULL REFERENCES scenario(id),
+    scenario_id     BIGINT      NOT NULL REFERENCES scenario(id) ON DELETE CASCADE,
     date_lancement  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     statut          TEXT        NOT NULL DEFAULT 'en_attente'
         CHECK (statut IN ('en_attente', 'en_cours', 'terminee', 'echec')),
@@ -37,12 +37,12 @@ CREATE INDEX idx_simulation_scenario ON simulation(scenario_id);
 
 CREATE TABLE galaxie (
     id          BIGSERIAL PRIMARY KEY,
-    scenario_id BIGINT NOT NULL UNIQUE REFERENCES scenario(id)
+    scenario_id BIGINT NOT NULL UNIQUE REFERENCES scenario(id) ON DELETE CASCADE
 );
 
 CREATE TABLE systeme_solaire (
     id         BIGSERIAL PRIMARY KEY,
-    galaxie_id BIGINT NOT NULL REFERENCES galaxie(id),
+    galaxie_id BIGINT NOT NULL REFERENCES galaxie(id) ON DELETE CASCADE,
     position_x DOUBLE PRECISION NOT NULL,
     position_y DOUBLE PRECISION NOT NULL,
     position_z DOUBLE PRECISION NOT NULL
@@ -52,7 +52,7 @@ CREATE INDEX idx_systeme_galaxie ON systeme_solaire(galaxie_id);
 
 CREATE TABLE etoile (
     id                      BIGSERIAL PRIMARY KEY,
-    systeme_id              BIGINT NOT NULL REFERENCES systeme_solaire(id),
+    systeme_id              BIGINT NOT NULL REFERENCES systeme_solaire(id) ON DELETE CASCADE,
     star_type               TEXT             NOT NULL,
     star_temp_K             DOUBLE PRECISION NOT NULL,
     star_mass_solar         DOUBLE PRECISION NOT NULL,
@@ -64,8 +64,8 @@ CREATE INDEX idx_etoile_systeme ON etoile(systeme_id);
 
 CREATE TABLE planete (
     id                      BIGSERIAL PRIMARY KEY,
-    systeme_id              BIGINT NOT NULL REFERENCES systeme_solaire(id),
-    etoile_id               BIGINT NOT NULL REFERENCES etoile(id),
+    systeme_id              BIGINT NOT NULL REFERENCES systeme_solaire(id) ON DELETE CASCADE,
+    etoile_id               BIGINT NOT NULL REFERENCES etoile(id) ON DELETE CASCADE,
     planet_distance_UA      DOUBLE PRECISION NOT NULL,
     planet_mass_terre       DOUBLE PRECISION NOT NULL,
     planet_radius_terre     DOUBLE PRECISION NOT NULL,
@@ -88,7 +88,7 @@ INSERT INTO type_evenement (libelle) VALUES
 
 CREATE TABLE evenement (
     id                 BIGSERIAL PRIMARY KEY,
-    simulation_id      BIGINT  NOT NULL REFERENCES simulation(id),
+    simulation_id      BIGINT  NOT NULL REFERENCES simulation(id) ON DELETE CASCADE,
     timecode           BIGINT  NOT NULL,
     type_evenement_id  SMALLINT NOT NULL REFERENCES type_evenement(id),
     entite_id          BIGINT  NOT NULL,
