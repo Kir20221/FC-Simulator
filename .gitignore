@@ -19,3 +19,5 @@ Thumbs.db
 .env.local
 
 knowledges/
+data/training/*
+!data/training/.gitkeep
