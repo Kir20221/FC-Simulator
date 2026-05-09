@@ -11,7 +11,7 @@ from app.scenario import ScenarioRequest, SimulationRequest
 from app.simulation.entites import generer_entites
 from app.simulation.moteur import executer_simulation
 
-app = FastAPI(title="Drake — service simulation", version="0.0.1")
+app = FastAPI(title="FC-Simulator — service simulation", version="0.0.1")
 app.include_router(ml_router, prefix="/api/v1/training")
 
 @app.post("/api/v1/scenarios")
@@ -29,7 +29,7 @@ def create_scenario_full(req: ScenarioRequest):
     scenario_id = result_scenario["scenario_id"]
     result_entites = create_entites(scenario_id)
     result_simulation = create_simulation(scenario_id, SimulationRequest())
-    
+
     return {
         "scenario_id":   scenario_id,
         "galaxie_id":    result_entites["galaxie_id"],
@@ -42,7 +42,7 @@ def create_scenario_full(req: ScenarioRequest):
 def get_scenario(scenario_id: int):
     with get_conn() as conn, conn.cursor() as cur:
         cur.execute(
-            "SELECT id, nom, statut_entites, nombre_systemes "
+            "SELECT id, nom, statut_entites, nb_systemes "
             "FROM scenario WHERE id = %s",
             (scenario_id,),
         )
@@ -53,7 +53,7 @@ def get_scenario(scenario_id: int):
             "id":             row[0],
             "nom":            row[1],
             "statut_entites": row[2],
-            "nombre_systemes": row[3],
+            "nb_systemes":    row[3],
         }
 
         cur.execute(
