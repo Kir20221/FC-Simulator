@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import psycopg
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class ParametresAstrophysiques(BaseModel):
@@ -82,5 +82,9 @@ class SimulationRequest(BaseModel):
     d'occurrence des événements via inférence TPP. Le seed est optionnel,
     tiré au hasard si non fourni.
     """
+    # Désactive la protection du préfixe 'model_' réservé par Pydantic v2,
+    # pour que le champ 'model_nom' n'émette pas de warning.
+    model_config = ConfigDict(protected_namespaces=())
+
     model_nom: str = Field(..., description="Nom du modèle entraîné à utiliser pour l'inférence.")
     seed:      int | None = None
