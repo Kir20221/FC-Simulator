@@ -20,6 +20,8 @@ CREATE TABLE scenario (
     nb_systemes BIGINT NOT NULL CHECK (nb_systemes > 0)
 );
 
+-- table 'model' déclarée plus bas, mais simulation y fait référence : on
+-- la déclare ici puis on ajoute la FK simulation.model_nom à la fin.
 CREATE TABLE simulation (
     id              BIGSERIAL PRIMARY KEY,
     scenario_id     BIGINT      NOT NULL REFERENCES scenario(id) ON DELETE CASCADE,
@@ -28,10 +30,12 @@ CREATE TABLE simulation (
         CHECK (statut IN ('en_attente', 'en_cours', 'terminee', 'echec')),
     progression     DOUBLE PRECISION NOT NULL DEFAULT 0.0
         CHECK (progression BETWEEN 0.0 AND 1.0),
-    seed            BIGINT      NOT NULL
+    seed            BIGINT      NOT NULL,
+    model_nom       TEXT        NOT NULL
 );
 
 CREATE INDEX idx_simulation_scenario ON simulation(scenario_id);
+CREATE INDEX idx_simulation_model    ON simulation(model_nom);
 
 -- ---------- Entités ---------------------------------------------------------
 
@@ -136,3 +140,11 @@ CREATE TABLE IF NOT EXISTS model (
     final_train_loss  DOUBLE PRECISION NOT NULL,
     final_val_loss    DOUBLE PRECISION NOT NULL
 );
+
+-- Contrainte FK simulation.model_nom -> model.nom, ajoutée après la
+-- création de la table model. ON DELETE RESTRICT pour empêcher la
+-- suppression d'un modèle utilisé par des simulations existantes.
+ALTER TABLE simulation
+    ADD CONSTRAINT fk_simulation_model
+    FOREIGN KEY (model_nom) REFERENCES model(nom)
+    ON DELETE RESTRICT;

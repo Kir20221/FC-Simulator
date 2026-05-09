@@ -63,9 +63,12 @@ def create_simulation(scenario_id: int, req: SimulationRequest):
 
 
 @app.post("/api/v1/scenarios/full")
-def create_scenario_full(req: ScenarioRequest):
+def create_scenario_full(
+    req: ScenarioRequest,
+    model_nom: str = Query(..., description="Modèle ML à utiliser pour la simulation."),
+):
     with get_conn() as conn:
-        return service.creer_scenario_full(conn, req)
+        return service.creer_scenario_full(conn, req, model_nom)
 
 
 # ============================================================================

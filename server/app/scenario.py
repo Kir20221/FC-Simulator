@@ -76,4 +76,11 @@ class ScenarioRequest(BaseModel):
 
 
 class SimulationRequest(BaseModel):
-    seed: int | None = None
+    """Paramètres d'exécution d'une simulation.
+
+    Le modèle ML utilisé est obligatoire : il définit la dynamique
+    d'occurrence des événements via inférence TPP. Le seed est optionnel,
+    tiré au hasard si non fourni.
+    """
+    model_nom: str = Field(..., description="Nom du modèle entraîné à utiliser pour l'inférence.")
+    seed:      int | None = None

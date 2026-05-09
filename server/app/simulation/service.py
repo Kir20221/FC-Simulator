@@ -62,13 +62,16 @@ def lire_scenario(conn: psycopg.Connection, scenario_id: int) -> dict:
         scenario = _serialiser_scenario_ligne(row)
 
         cur.execute(
-            "SELECT s.id, s.statut, s.progression, "
+            "SELECT s.id, s.statut, s.progression, s.model_nom, "
             "       (SELECT COUNT(*) FROM evenement e WHERE e.simulation_id = s.id) "
             "FROM simulation s WHERE s.scenario_id = %s ORDER BY s.id",
             (scenario_id,),
         )
         scenario["simulations"] = [
-            {"id": r[0], "statut": r[1], "progression": r[2], "nb_evenements": r[3]}
+            {
+                "id": r[0], "statut": r[1], "progression": r[2],
+                "model_nom": r[3], "nb_evenements": r[4],
+            }
             for r in cur.fetchall()
         ]
     return scenario
@@ -124,13 +127,14 @@ def creer_simulation(
     scenario_id: int,
     req: SimulationRequest,
 ) -> dict:
-    """Crée une simulation et l'exécute. Seed tiré au hasard si non fourni."""
+    """Crée une simulation et l'exécute. Modèle ML obligatoire."""
     seed_effectif = req.seed if req.seed is not None else random.randint(0, 2**63 - 1)
 
     with conn.cursor() as cur:
         cur.execute(
-            "INSERT INTO simulation (scenario_id, seed) VALUES (%s, %s) RETURNING id",
-            (scenario_id, seed_effectif),
+            "INSERT INTO simulation (scenario_id, seed, model_nom) "
+            "VALUES (%s, %s, %s) RETURNING id",
+            (scenario_id, seed_effectif, req.model_nom),
         )
         simulation_id = cur.fetchone()[0]
 
@@ -140,6 +144,7 @@ def creer_simulation(
         "scenario_id":   scenario_id,
         "simulation_id": simulation_id,
         "seed":          seed_effectif,
+        "model_nom":     req.model_nom,
         "nb_evenements": nb_evenements,
     }
 
@@ -148,15 +153,23 @@ def creer_simulation(
 # PIPELINE COMPLET
 # ============================================================================
 
-def creer_scenario_full(conn: psycopg.Connection, req: ScenarioRequest) -> dict:
-    """Pipeline complet : crée scénario, génère entités, lance simulation."""
+def creer_scenario_full(
+    conn: psycopg.Connection,
+    req: ScenarioRequest,
+    model_nom: str,
+) -> dict:
+    """Pipeline complet : crée scénario, génère entités, lance simulation
+    avec le modèle ML fourni."""
     res_scenario = creer_scenario(conn, req)
     scenario_id = res_scenario["scenario_id"]
     res_entites = generer_entites_scenario(conn, scenario_id)
-    res_simulation = creer_simulation(conn, scenario_id, SimulationRequest())
+    res_simulation = creer_simulation(
+        conn, scenario_id, SimulationRequest(model_nom=model_nom),
+    )
     return {
         "scenario_id":   scenario_id,
         "galaxie_id":    res_entites["galaxie_id"],
         "simulation_id": res_simulation["simulation_id"],
+        "model_nom":     model_nom,
         "nb_evenements": res_simulation["nb_evenements"],
     }

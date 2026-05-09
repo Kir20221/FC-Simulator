@@ -11,8 +11,8 @@ Usage :
     python -m app.simulation.cli scenarios show <id>
     python -m app.simulation.cli scenarios delete <id>
     python -m app.simulation.cli scenarios entites <id> [--seed <s>]
-    python -m app.simulation.cli scenarios simulate <id> [--seed <s>]
-    python -m app.simulation.cli scenarios full --nom <n> --nb-systemes <N> [...]
+    python -m app.simulation.cli scenarios simulate <id> --model-nom <m> [--seed <s>]
+    python -m app.simulation.cli scenarios full --nom <n> --nb-systemes <N> --model-nom <m> [...]
 
     python -m app.simulation.cli galaxy density <scenario_id> [--nx N --ny N --nz N]
     python -m app.simulation.cli galaxy events <simulation_id> [--n N]
@@ -139,7 +139,7 @@ def cmd_scenarios_entites(args: argparse.Namespace) -> None:
 
 
 def cmd_scenarios_simulate(args: argparse.Namespace) -> None:
-    req = SimulationRequest(seed=args.seed)
+    req = SimulationRequest(model_nom=args.model_nom, seed=args.seed)
     with get_conn() as conn:
         result = service.creer_simulation(conn, args.scenario_id, req)
     _print_json(result)
@@ -148,7 +148,7 @@ def cmd_scenarios_simulate(args: argparse.Namespace) -> None:
 def cmd_scenarios_full(args: argparse.Namespace) -> None:
     req = _build_scenario_request(args)
     with get_conn() as conn:
-        result = service.creer_scenario_full(conn, req)
+        result = service.creer_scenario_full(conn, req, args.model_nom)
     _print_json(result)
 
 
@@ -215,12 +215,16 @@ def _build_parser() -> argparse.ArgumentParser:
 
     p_sim = sub_sc.add_parser("simulate", help="Lance une simulation sur un scénario")
     p_sim.add_argument("scenario_id", type=int)
+    p_sim.add_argument("--model-nom", dest="model_nom", required=True,
+                       help="Modèle ML utilisé pour l'inférence.")
     p_sim.add_argument("--seed", type=int, default=None)
     p_sim.set_defaults(func=cmd_scenarios_simulate)
 
     p_full = sub_sc.add_parser("full", help="Pipeline complet (scénario + entités + simulation)")
     p_full.add_argument("--nom", required=True)
     p_full.add_argument("--nb-systemes", dest="nb_systemes", type=int, required=True)
+    p_full.add_argument("--model-nom", dest="model_nom", required=True,
+                        help="Modèle ML utilisé pour l'inférence.")
     _ajouter_args_parametres(p_full)
     p_full.set_defaults(func=cmd_scenarios_full)
 
