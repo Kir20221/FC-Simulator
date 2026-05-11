@@ -31,6 +31,7 @@ L'architecture est conçue pour la cible 100 à 400 milliards de systèmes solai
 - Générateur du dataset
 - Modèle ML d'apprentissage de la suite des évènements
 - Pipeline d'entraînement complet
+- Chaîne complète scénario → entités → simulation par inférence ML → vues zoom galaxie pour Unity
 - Deux types d'événements implémentés pour l'instant : **apparition de la vie** sur une planète, **fin de séquence principale** d'une étoile.
 
 > **évolutions futures**
@@ -71,7 +72,11 @@ Tout est containerisé. Le service `api` héberge à la fois l'API métier et le
 
 ## Démarrage rapide
 
+> **Tout passe par API.** Aucune ligne de code à écrire pour piloter le simulateur, ni pour générer un dataset, ni pour entraîner un modèle, ni pour lancer une simulation. Les exemples ci-dessous utilisent `curl` pour leur concision et leur copiabilité, mais les mêmes appels sont disponibles dans l'interface graphique générée automatiquement sur http://localhost:8000/docs (Swagger UI). Au choix.
+
 Prérequis : Docker, Docker Compose.
+
+### 1. Lancer la stack
 
 ```bash
 git clone <repo>
@@ -81,9 +86,70 @@ docker compose up --build
 
 Trois services démarrent :
 
-- **API** : http://localhost:8000 (OpenAPI sur `/docs`)
+- **API** : http://localhost:8000 (Swagger UI sur `/docs`)
 - **pgAdmin** : http://localhost:5050 (`admin@drake.fr` / `admin`)
 - **Postgres** : exposé sur le port 5432
+
+### 2. Générer un mini-dataset d'entraînement
+
+```bash
+curl -X POST "http://localhost:8000/api/v1/training/datasets" \
+     -H "Content-Type: application/json" \
+     -d '{"nom": "ds_demo", "nb_systemes": 1000, "seed": 42}'
+```
+
+Quelques secondes. Le dataset est composé de deux fichiers parquet (planètes + événements) dans `data/training/`.
+
+### 3. Entraîner un mini-modèle dessus
+
+```bash
+curl -X POST "http://localhost:8000/api/v1/training/models" \
+     -H "Content-Type: application/json" \
+     -d '{"nom": "m_demo", "dataset_nom": "ds_demo", "nb_epochs": 3}'
+```
+
+Quelques secondes également. Le `.pth` est sauvegardé dans `data/training/`. **Ce modèle est volontairement sous-entraîné** : il sert juste à valider le pipeline. Pour des résultats cohérents, voir l'encart « Séquence réaliste » plus bas.
+
+### 4. Lancer un scénario en utilisant le modèle
+
+```bash
+curl -X POST "http://localhost:8000/api/v1/scenarios/full?model_nom=m_demo" \
+     -H "Content-Type: application/json" \
+     -d '{
+       "nom": "demo",
+       "nb_systemes": 100,
+       "parametres": {
+         "masse_stellaire_moyenne": 1.0,
+         "indice_tellurique": 0.5,
+         "planetes_par_systeme_moyen": 2.0,
+         "duree_simulation_Ga": 10.0
+       }
+     }'
+```
+
+L'endpoint `full` enchaîne en une fois : création du scénario, génération des entités (substrat physique de la galaxie), et exécution de la simulation par inférence du modèle ML. La réponse contient le `simulation_id`.
+
+### 5. Récupérer les vues zoom galaxie
+
+Avec le `simulation_id` et le `scenario_id` renvoyés à l'étape précédente :
+
+```bash
+curl "http://localhost:8000/api/v1/scenarios/<scenario_id>/galaxy/density"
+curl "http://localhost:8000/api/v1/simulations/<simulation_id>/galaxy/events"
+```
+
+C'est ce que consommera l'IHM Unity au niveau de zoom galaxie : une grille 3D creuse de densité des systèmes, et la liste des événements groupés par système (uniquement les systèmes où la vie est apparue) avec leur position 3D.
+
+> **Séquence réaliste**
+>
+> Le pipeline ci-dessus passe en quelques minutes mais le modèle est trop peu entraîné pour produire des résultats fidèles aux lois consensuelles encodées par le générateur de vérité. Pour des résultats cohérents (proportions d'événements alignées avec celles du dataset), monter en charge :
+> - Étape 2 : `"nb_systemes": 100000` au lieu de 1000.
+> - Étape 3 : `"nb_epochs": 20` au lieu de 3.
+> - Étape 4 : `"nb_systemes": 1000` ou plus.
+>
+> Compter environ 15 minutes sur CPU pour l'entraînement à 100k systèmes / 20 epochs, puis quelques dizaines de secondes pour une simulation à 1000 systèmes / 10 Ga.
+
+L'ensemble des endpoints est documenté de façon interactive sur http://localhost:8000/docs. Chaque endpoint a son équivalent CLI symétrique (cf. section **API** ci-dessous).
 
 
 ## API
@@ -94,15 +160,22 @@ Préfixe commun : `/api/v1/`. Documentation interactive complète sur `/docs`.
 
 **Scénarios et simulations**
 
-| Méthode | URL                                  | Description                                 |
-|---------|--------------------------------------|---------------------------------------------|
-| GET     | `/health`                            | Vie du service + DB joignable               |
-| POST    | `/scenarios`                         | Crée un scénario                            |
-| GET     | `/scenarios/{id}`                    | État d'un scénario + ses simulations        |
-| POST    | `/scenarios/{id}/entites`            | Génère les entités du scénario              |
-| POST    | `/scenarios/{id}/simulations`        | Crée et exécute une simulation              |
-| GET     | `/simulations/{id}/evenements`       | Journal d'une simulation                    |
-| POST    | `/scenarios/full`                    | Pipeline complet (endpoint de confort dev)  |
+| Méthode | URL                                       | Description                                              |
+|---------|-------------------------------------------|----------------------------------------------------------|
+| POST    | `/scenarios`                              | Crée un scénario                                         |
+| GET     | `/scenarios`                              | Liste les scénarios                                      |
+| GET     | `/scenarios/{id}`                         | État d'un scénario + ses simulations                     |
+| DELETE  | `/scenarios/{id}`                         | Supprime un scénario (cascade entités + simulations)     |
+| POST    | `/scenarios/{id}/entites`                 | Génère les entités du scénario                           |
+| POST    | `/scenarios/{id}/simulations`             | Crée et exécute une simulation (`model_nom` requis)      |
+| POST    | `/scenarios/full?model_nom=<m>`           | Pipeline complet (endpoint de confort dev)               |
+
+**Zoom galaxie**
+
+| Méthode | URL                                       | Description                                              |
+|---------|-------------------------------------------|----------------------------------------------------------|
+| GET     | `/scenarios/{id}/galaxy/density`          | Grille 3D régulière creuse de densité des systèmes       |
+| GET     | `/simulations/{id}/galaxy/events`         | Événements zoom galaxie + compteur incrémental           |
 
 **Module ML — datasets d'entraînement**
 
@@ -122,7 +195,7 @@ Préfixe commun : `/api/v1/`. Documentation interactive complète sur `/docs`.
 | GET     | `/training/models/{nom}`             | Métadonnées d'un modèle                     |
 | DELETE  | `/training/models/{nom}`             | Supprime un modèle (DB + .pth)              |
 
-À chaque endpoint du module ML correspond une commande CLI symétrique, exécutable via `docker compose exec api python -m ml.cli ...`.
+À chaque endpoint correspond une commande CLI symétrique : `docker compose exec api python -m ml.cli ...` pour la partie ML (datasets, models), et `docker compose exec api python -m app.simulation.cli ...` pour les scénarios, simulations et zoom galaxie.
 
 ## Stack technique
 
@@ -141,15 +214,16 @@ fc-simulator/
 ├── data/training/         # datasets parquet et modèles .pth (volume Docker)
 └── server/
     ├── sql/init.sql       # schéma DB initial
-    └── app/
-        ├── main.py        # endpoints FastAPI
-        ├── db/            # accès Postgres
-        ├── simulation/    # substrat + moteur d'événements
-        └── ml/            # module ML
-            ├── api.py     # endpoints /training/ (datasets + models)
-            ├── cli.py     # CLI symétrique
-            ├── service.py
-            ├── dataset.py
-            ├── generator/ # générateur de vérité scientifique
-            └── training/  # modèle TPP, entraînement, inférence
+    ├── app/
+    │   ├── main.py        # endpoints FastAPI
+    │   ├── scenario.py    # Active Record Scenario + requests
+    │   ├── db/            # accès Postgres
+    │   └── simulation/    # générateur d'entités + moteur ML + vues zoom galaxie + CLI
+    └── ml/                # module ML
+        ├── api.py         # endpoints /training/ (datasets + models)
+        ├── cli.py         # CLI symétrique
+        ├── service.py
+        ├── dataset.py
+        ├── generator/     # générateur de vérité scientifique (Bloc A)
+        └── training/      # modèle TPP, entraînement, inférence (Bloc B)
 ```
