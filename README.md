@@ -14,6 +14,13 @@ Mais restons humbles, ce projet est d'abord un projet d'exploration technique (M
 
 Ainsi, les ambitions scientifiques affichées (Drake, Fermi) rendent l'exercice intéressant, mais ne sont pas un objectif final que ce prototype prétendrait atteindre, évidemment ! Cela-dit, la calibration scientifique (zones habitables, distributions stellaires, relations masse-rayon, évènements interdépendants) tente de suivre au mieux l'état de l'art scientifique actuel, comme le **suivi d'une spécification client**.
 
+## vue prototypale de la galaxie et les prédictions ML
+Les cubes représentent les densités stellaires. Les apparitions colorées repréentent les événements stellaires (2 couleurs car 2 types d'événements implémentés à ce stade)
+
+
+https://github.com/user-attachments/assets/35e6e836-6705-47fc-971d-ec84d94d0e2b
+
+
 ## Philosophie du simulateur
 
 1. **Construction de la galaxie** — l'utilisateur fixe les paramètres astrophysiques. Le générateur produit alors une galaxie : étoiles avec leurs propriétés physiques, planètes avec leurs caractéristiques, zones habitables calculées, etc.
@@ -26,13 +33,13 @@ L'architecture est conçue pour la cible 100 à 400 milliards de systèmes solai
 
 ## Périmètre du prototype
 
-- Stack Docker complète (Postgres + FastAPI), schéma DB stable
-- Génération des éléments galactiques
-- Générateur du dataset
+- Générateur du dataset (éléments galactiques et événements)
 - Modèle ML d'apprentissage de la suite des évènements
 - Pipeline d'entraînement complet
 - Chaîne complète scénario → entités → simulation par inférence ML → vues zoom galaxie pour Unity
-- Deux types d'événements implémentés pour l'instant : **apparition de la vie** sur une planète, **fin de séquence principale** d'une étoile.
+- Deux types d'événements implémentés pour l'instant : **apparition de la vie** sur une planète, **fin de séquence principale** d'une étoile
+- Côté Unity : consommation des API
+- Implémentation prototypale de la vue galactique et des evénements (vues systemes solaires et planétaires hors prototype)
 
 > **évolutions futures**
 - ajout de types d'événements (impacts cométaires majeurs, supernovae, émergence de civilisations, contacts inter-civilisations, expansions) et de leurs interdépendances temporelles. Le format de stockage et l'architecture ML sont conçus pour absorber ces extensions sans refonte
