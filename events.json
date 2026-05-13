@@ -1,0 +1,576 @@
+{
+  "simulation_id": 7,
+  "n_taux_rafraichissement": 100,
+  "nb_events_total": 542,
+  "compteur_final": {
+    "star_main_sequence_end": 514,
+    "life_apparition": 28
+  },
+  "compteur_checkpoints": [
+    {
+      "timecode": 654,
+      "counts": {
+        "star_main_sequence_end": 100
+      }
+    },
+    {
+      "timecode": 4348,
+      "counts": {
+        "star_main_sequence_end": 200
+      }
+    },
+    {
+      "timecode": 12780,
+      "counts": {
+        "star_main_sequence_end": 292,
+        "life_apparition": 8
+      }
+    },
+    {
+      "timecode": 37074,
+      "counts": {
+        "star_main_sequence_end": 379,
+        "life_apparition": 21
+      }
+    },
+    {
+      "timecode": 74357,
+      "counts": {
+        "star_main_sequence_end": 473,
+        "life_apparition": 27
+      }
+    },
+    {
+      "timecode": 99796,
+      "counts": {
+        "star_main_sequence_end": 514,
+        "life_apparition": 28
+      }
+    }
+  ],
+  "systemes": [
+    {
+      "system_id": 1123,
+      "position_x": 1245.0785591253846,
+      "position_y": 698.071699216831,
+      "position_z": 298.705477415786,
+      "evenements": [
+        {
+          "timecode": 13890,
+          "type": "life_apparition",
+          "entite_type": "planete",
+          "entite_id": 2650
+        }
+      ],
+      "nb_evenements": 1
+    },
+    {
+      "system_id": 1137,
+      "position_x": 119.93951300620222,
+      "position_y": -3858.167693384824,
+      "position_z": -37.904877219740655,
+      "evenements": [
+        {
+          "timecode": 62179,
+          "type": "life_apparition",
+          "entite_type": "planete",
+          "entite_id": 2683
+        }
+      ],
+      "nb_evenements": 1
+    },
+    {
+      "system_id": 1148,
+      "position_x": -565.6748803052969,
+      "position_y": -5932.944303522572,
+      "position_z": 444.1783840321497,
+      "evenements": [
+        {
+          "timecode": 27303,
+          "type": "life_apparition",
+          "entite_type": "planete",
+          "entite_id": 2714
+        }
+      ],
+      "nb_evenements": 1
+    },
+    {
+      "system_id": 1154,
+      "position_x": -9110.797760398416,
+      "position_y": -3913.2315304322674,
+      "position_z": 152.21857712513727,
+      "evenements": [
+        {
+          "timecode": 17741,
+          "type": "life_apparition",
+          "entite_type": "planete",
+          "entite_id": 2731
+        },
+        {
+          "timecode": 34767,
+          "type": "star_main_sequence_end",
+          "entite_type": "etoile",
+          "entite_id": 1154
+        }
+      ],
+      "nb_evenements": 2
+    },
+    {
+      "system_id": 1167,
+      "position_x": -1158.7756801190158,
+      "position_y": -2297.9911233517114,
+      "position_z": -445.64343959558533,
+      "evenements": [
+        {
+          "timecode": 22695,
+          "type": "life_apparition",
+          "entite_type": "planete",
+          "entite_id": 2758
+        }
+      ],
+      "nb_evenements": 1
+    },
+    {
+      "system_id": 1184,
+      "position_x": -7029.656237186496,
+      "position_y": -1776.7942652356146,
+      "position_z": -165.33677278846213,
+      "evenements": [
+        {
+          "timecode": 21606,
+          "type": "life_apparition",
+          "entite_type": "planete",
+          "entite_id": 2801
+        },
+        {
+          "timecode": 40151,
+          "type": "star_main_sequence_end",
+          "entite_type": "etoile",
+          "entite_id": 1184
+        }
+      ],
+      "nb_evenements": 2
+    },
+    {
+      "system_id": 1220,
+      "position_x": 21.079917730345244,
+      "position_y": 83.33759320309066,
+      "position_z": 380.5254326513405,
+      "evenements": [
+        {
+          "timecode": 48695,
+          "type": "life_apparition",
+          "entite_type": "planete",
+          "entite_id": 2894
+        },
+        {
+          "timecode": 97949,
+          "type": "star_main_sequence_end",
+          "entite_type": "etoile",
+          "entite_id": 1220
+        }
+      ],
+      "nb_evenements": 2
+    },
+    {
+      "system_id": 1295,
+      "position_x": 514.9357480726052,
+      "position_y": 10669.019359718888,
+      "position_z": -155.20615020906348,
+      "evenements": [
+        {
+          "timecode": 9238,
+          "type": "life_apparition",
+          "entite_type": "planete",
+          "entite_id": 3046
+        },
+        {
+          "timecode": 10776,
+          "type": "star_main_sequence_end",
+          "entite_type": "etoile",
+          "entite_id": 1295
+        }
+      ],
+      "nb_evenements": 2
+    },
+    {
+      "system_id": 1305,
+      "position_x": 5957.942175165012,
+      "position_y": 2165.2692078483615,
+      "position_z": -475.5851435753347,
+      "evenements": [
+        {
+          "timecode": 9876,
+          "type": "life_apparition",
+          "entite_type": "planete",
+          "entite_id": 3076
+        },
+        {
+          "timecode": 43823,
+          "type": "star_main_sequence_end",
+          "entite_type": "etoile",
+          "entite_id": 1305
+        }
+      ],
+      "nb_evenements": 2
+    },
+    {
+      "system_id": 1388,
+      "position_x": 1127.1190228354008,
+      "position_y": -1474.3668160314498,
+      "position_z": 651.3117436471523,
+      "evenements": [
+        {
+          "timecode": 21156,
+          "type": "life_apparition",
+          "entite_type": "planete",
+          "entite_id": 3255
+        },
+        {
+          "timecode": 28069,
+          "type": "star_main_sequence_end",
+          "entite_type": "etoile",
+          "entite_id": 1388
+        }
+      ],
+      "nb_evenements": 2
+    },
+    {
+      "system_id": 1509,
+      "position_x": -12360.216275921988,
+      "position_y": 530.5772971072952,
+      "position_z": -295.28911630969395,
+      "evenements": [
+        {
+          "timecode": 36604,
+          "type": "life_apparition",
+          "entite_type": "planete",
+          "entite_id": 3528
+        },
+        {
+          "timecode": 54838,
+          "type": "star_main_sequence_end",
+          "entite_type": "etoile",
+          "entite_id": 1509
+        }
+      ],
+      "nb_evenements": 2
+    },
+    {
+      "system_id": 1514,
+      "position_x": 4755.392926808469,
+      "position_y": -8820.238093725837,
+      "position_z": -1084.8037260659592,
+      "evenements": [
+        {
+          "timecode": 5049,
+          "type": "life_apparition",
+          "entite_type": "planete",
+          "entite_id": 3541
+        },
+        {
+          "timecode": 93450,
+          "type": "star_main_sequence_end",
+          "entite_type": "etoile",
+          "entite_id": 1514
+        }
+      ],
+      "nb_evenements": 2
+    },
+    {
+      "system_id": 1518,
+      "position_x": -48139.55728572964,
+      "position_y": 21058.922446513097,
+      "position_z": -410.2595656034951,
+      "evenements": [
+        {
+          "timecode": 35747,
+          "type": "life_apparition",
+          "entite_type": "planete",
+          "entite_id": 3547
+        }
+      ],
+      "nb_evenements": 1
+    },
+    {
+      "system_id": 1535,
+      "position_x": 11310.692928730941,
+      "position_y": 11731.784046813062,
+      "position_z": 85.38514928297839,
+      "evenements": [
+        {
+          "timecode": 8498,
+          "type": "life_apparition",
+          "entite_type": "planete",
+          "entite_id": 3585
+        },
+        {
+          "timecode": 47767,
+          "type": "star_main_sequence_end",
+          "entite_type": "etoile",
+          "entite_id": 1535
+        }
+      ],
+      "nb_evenements": 2
+    },
+    {
+      "system_id": 1640,
+      "position_x": -3817.22069593081,
+      "position_y": -7340.842524710465,
+      "position_z": -119.43505585564985,
+      "evenements": [
+        {
+          "timecode": 61701,
+          "type": "life_apparition",
+          "entite_type": "planete",
+          "entite_id": 3811
+        }
+      ],
+      "nb_evenements": 1
+    },
+    {
+      "system_id": 1736,
+      "position_x": 5159.267102160756,
+      "position_y": -8639.112927284696,
+      "position_z": -96.04859093666585,
+      "evenements": [
+        {
+          "timecode": 24134,
+          "type": "life_apparition",
+          "entite_type": "planete",
+          "entite_id": 4015
+        },
+        {
+          "timecode": 99067,
+          "type": "star_main_sequence_end",
+          "entite_type": "etoile",
+          "entite_id": 1736
+        }
+      ],
+      "nb_evenements": 2
+    },
+    {
+      "system_id": 1778,
+      "position_x": -16372.960811531628,
+      "position_y": 6751.126257955229,
+      "position_z": 1121.5273432141566,
+      "evenements": [
+        {
+          "timecode": 37391,
+          "type": "life_apparition",
+          "entite_type": "planete",
+          "entite_id": 4104
+        }
+      ],
+      "nb_evenements": 1
+    },
+    {
+      "system_id": 1859,
+      "position_x": -1163.7905222250122,
+      "position_y": 2629.6419472397465,
+      "position_z": -799.9179436977644,
+      "evenements": [
+        {
+          "timecode": 30941,
+          "type": "life_apparition",
+          "entite_type": "planete",
+          "entite_id": 4279
+        }
+      ],
+      "nb_evenements": 1
+    },
+    {
+      "system_id": 1909,
+      "position_x": -28852.476089545962,
+      "position_y": 3414.782657623653,
+      "position_z": -828.8682096655344,
+      "evenements": [
+        {
+          "timecode": 38525,
+          "type": "life_apparition",
+          "entite_type": "planete",
+          "entite_id": 4381
+        }
+      ],
+      "nb_evenements": 1
+    },
+    {
+      "system_id": 1945,
+      "position_x": -10631.604546365645,
+      "position_y": 21417.696928563862,
+      "position_z": -4.971434299863656,
+      "evenements": [
+        {
+          "timecode": 9935,
+          "type": "life_apparition",
+          "entite_type": "planete",
+          "entite_id": 4453
+        },
+        {
+          "timecode": 11437,
+          "type": "star_main_sequence_end",
+          "entite_type": "etoile",
+          "entite_id": 1945
+        }
+      ],
+      "nb_evenements": 2
+    },
+    {
+      "system_id": 1961,
+      "position_x": -1627.7264554697988,
+      "position_y": 1165.6193221579354,
+      "position_z": 169.76860576644685,
+      "evenements": [
+        {
+          "timecode": 53149,
+          "type": "life_apparition",
+          "entite_type": "planete",
+          "entite_id": 4494
+        },
+        {
+          "timecode": 55784,
+          "type": "star_main_sequence_end",
+          "entite_type": "etoile",
+          "entite_id": 1961
+        }
+      ],
+      "nb_evenements": 2
+    },
+    {
+      "system_id": 2021,
+      "position_x": -2305.1223695984454,
+      "position_y": 19502.641602184012,
+      "position_z": -9.134297473084404,
+      "evenements": [
+        {
+          "timecode": 8045,
+          "type": "life_apparition",
+          "entite_type": "planete",
+          "entite_id": 4624
+        },
+        {
+          "timecode": 37544,
+          "type": "star_main_sequence_end",
+          "entite_type": "etoile",
+          "entite_id": 2021
+        }
+      ],
+      "nb_evenements": 2
+    },
+    {
+      "system_id": 2052,
+      "position_x": 7391.943257566909,
+      "position_y": 13366.743215835078,
+      "position_z": 183.79826780370416,
+      "evenements": [
+        {
+          "timecode": 8757,
+          "type": "life_apparition",
+          "entite_type": "planete",
+          "entite_id": 4694
+        },
+        {
+          "timecode": 43426,
+          "type": "star_main_sequence_end",
+          "entite_type": "etoile",
+          "entite_id": 2052
+        }
+      ],
+      "nb_evenements": 2
+    },
+    {
+      "system_id": 2053,
+      "position_x": 2383.1412252499213,
+      "position_y": -1444.51396144679,
+      "position_z": 396.78088391884654,
+      "evenements": [
+        {
+          "timecode": 20142,
+          "type": "life_apparition",
+          "entite_type": "planete",
+          "entite_id": 4698
+        }
+      ],
+      "nb_evenements": 1
+    },
+    {
+      "system_id": 2063,
+      "position_x": 24349.947843657912,
+      "position_y": -1357.9858710290773,
+      "position_z": -374.4111283760487,
+      "evenements": [
+        {
+          "timecode": 13747,
+          "type": "life_apparition",
+          "entite_type": "planete",
+          "entite_id": 4723
+        },
+        {
+          "timecode": 88976,
+          "type": "star_main_sequence_end",
+          "entite_type": "etoile",
+          "entite_id": 2063
+        }
+      ],
+      "nb_evenements": 2
+    },
+    {
+      "system_id": 2064,
+      "position_x": 25114.545684737885,
+      "position_y": -54645.388662075304,
+      "position_z": 341.43945297490177,
+      "evenements": [
+        {
+          "timecode": 31574,
+          "type": "life_apparition",
+          "entite_type": "planete",
+          "entite_id": 4725
+        },
+        {
+          "timecode": 46074,
+          "type": "star_main_sequence_end",
+          "entite_type": "etoile",
+          "entite_id": 2064
+        }
+      ],
+      "nb_evenements": 2
+    },
+    {
+      "system_id": 2065,
+      "position_x": 15099.143557691757,
+      "position_y": -7425.090432134945,
+      "position_z": 349.3437665066805,
+      "evenements": [
+        {
+          "timecode": 5723,
+          "type": "life_apparition",
+          "entite_type": "planete",
+          "entite_id": 4728
+        },
+        {
+          "timecode": 6287,
+          "type": "star_main_sequence_end",
+          "entite_type": "etoile",
+          "entite_id": 2065
+        }
+      ],
+      "nb_evenements": 2
+    },
+    {
+      "system_id": 2072,
+      "position_x": -8866.867237180833,
+      "position_y": -952.4221520975943,
+      "position_z": -211.92409176031407,
+      "evenements": [
+        {
+          "timecode": 92445,
+          "type": "life_apparition",
+          "entite_type": "planete",
+          "entite_id": 4741
+        }
+      ],
+      "nb_evenements": 1
+    }
+  ],
+  "nb_systemes_remarquables": 28
+}

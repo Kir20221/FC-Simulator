@@ -22,3 +22,4 @@ knowledges/
 data/training/*
 !data/training/.gitkeep
 CLAUDE.md
+json/
